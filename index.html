@@ -1,0 +1,1901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SecureBank — Digital Banking</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0a1628;--navy-mid:#0f2044;--navy-light:#1a3560;
+  --blue:#1e5fd4;--blue-bright:#2d7ef7;--blue-glow:#4d9fff;
+  --gold:#c9a84c;--gold-light:#e8c96a;
+  --white:#ffffff;--off-white:#f0f4ff;
+  --text-muted:#8899bb;--text-body:#ccd6f6;
+  --danger:#e05252;--success:#3ecf8e;
+  --card-bg:rgba(255,255,255,0.04);--card-border:rgba(255,255,255,0.08);
+  --input-bg:rgba(255,255,255,0.06);
+  --shadow:0 24px 64px rgba(0,0,0,0.4);
+  --radius:16px;--radius-sm:10px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(30,95,212,0.18) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 80%,rgba(201,168,76,0.08) 0%,transparent 50%);pointer-events:none}
+
+/* ── PAGE SYSTEM ── */
+.page{display:none;min-height:100vh;position:relative;z-index:1}
+.page.active{display:flex}
+
+/* ── GLOBAL SPINNER OVERLAY ── */
+.global-loader{
+  position:fixed;inset:0;z-index:9998;
+  background:rgba(10,22,40,0.75);
+  backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;
+}
+.global-loader.show{display:flex}
+.spinner{
+  width:48px;height:48px;
+  border:4px solid rgba(255,255,255,0.1);
+  border-top:4px solid var(--blue-bright);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+.spinner-sm{
+  width:18px;height:18px;
+  border:2px solid rgba(255,255,255,0.2);
+  border-top:2px solid var(--white);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+  display:inline-block;
+}
+.global-loader p{color:var(--text-muted);font-size:0.9rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── AUTH ── */
+.auth-page{align-items:center;justify-content:center;padding:24px;animation:fadeIn 0.5s ease}
+.auth-container{width:100%;max-width:460px}
+.auth-brand{text-align:center;margin-bottom:40px}
+.auth-brand .logo-mark{width:64px;height:64px;background:linear-gradient(135deg,var(--blue),var(--gold));border-radius:20px;display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px;box-shadow:0 8px 32px rgba(30,95,212,0.4)}
+.auth-brand h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;background:linear-gradient(135deg,var(--white),var(--gold-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.auth-brand p{color:var(--text-muted);font-size:0.9rem;margin-top:6px}
+.auth-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:40px;backdrop-filter:blur(20px);box-shadow:var(--shadow)}
+.auth-tabs{display:flex;background:rgba(255,255,255,0.04);border-radius:12px;padding:4px;margin-bottom:28px}
+.auth-tab{flex:1;padding:10px;text-align:center;border-radius:9px;cursor:pointer;font-size:0.9rem;font-weight:500;color:var(--text-muted);transition:all 0.25s}
+.auth-tab.active{background:var(--blue);color:var(--white);box-shadow:0 4px 16px rgba(30,95,212,0.4)}
+
+/* ── FORM ELEMENTS ── */
+.form-group{margin-bottom:18px;position:relative}
+.form-group label{display:block;font-size:0.8rem;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px}
+.form-group input,.form-group select{
+  width:100%;background:var(--input-bg);border:1px solid var(--card-border);
+  border-radius:var(--radius-sm);padding:14px 16px;color:var(--white);
+  font-family:'DM Sans',sans-serif;font-size:0.95rem;
+  transition:border-color 0.2s,box-shadow 0.2s;outline:none;
+}
+.form-group input:focus,.form-group select:focus{border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(45,126,247,0.15)}
+.form-group input::placeholder{color:rgba(255,255,255,0.2)}
+
+/* ── VALIDATION STATES ── */
+.form-group input.input-error{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(224,82,82,0.15)!important;animation:shake 0.3s ease}
+.form-group input.input-success{border-color:var(--success)!important;box-shadow:0 0 0 3px rgba(62,207,142,0.1)!important}
+.field-error{font-size:0.75rem;color:#ff8a8a;margin-top:5px;display:none}
+.field-error.show{display:block;animation:fadeIn 0.2s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 24px;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;transition:all 0.2s;text-decoration:none}
+.btn:disabled{opacity:0.6;cursor:not-allowed;transform:none!important}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-bright));color:var(--white);width:100%;box-shadow:0 8px 24px rgba(30,95,212,0.35)}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 12px 32px rgba(30,95,212,0.45)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--navy);font-weight:700}
+.btn-gold:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(201,168,76,0.35)}
+.btn-ghost{background:var(--card-bg);color:var(--text-body);border:1px solid var(--card-border)}
+.btn-ghost:hover{background:rgba(255,255,255,0.08)}
+.btn-danger{background:rgba(224,82,82,0.15);color:var(--danger);border:1px solid rgba(224,82,82,0.3)}
+.btn-danger:hover{background:rgba(224,82,82,0.25)}
+.btn-success{background:rgba(62,207,142,0.15);color:var(--success);border:1px solid rgba(62,207,142,0.3)}
+.btn-success:hover{background:rgba(62,207,142,0.25)}
+.btn-sm{padding:9px 16px;font-size:0.85rem}
+.btn-icon{width:40px;height:40px;padding:0;border-radius:10px}
+
+/* ── ALERTS ── */
+.alert{padding:12px 16px;border-radius:var(--radius-sm);font-size:0.875rem;margin-bottom:16px;display:none}
+.alert.show{display:block;animation:slideDown 0.3s ease}
+.alert-error{background:rgba(224,82,82,0.15);border:1px solid rgba(224,82,82,0.3);color:#ff8a8a}
+.alert-success{background:rgba(62,207,142,0.15);border:1px solid rgba(62,207,142,0.3);color:var(--success)}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+.divider{text-align:center;color:var(--text-muted);font-size:0.8rem;margin:20px 0;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:var(--card-border)}
+.divider::before{left:0}.divider::after{right:0}
+
+/* ── APP SHELL ── */
+.app-page{flex-direction:row}
+.sidebar{width:260px;min-height:100vh;background:rgba(10,22,40,0.95);border-right:1px solid var(--card-border);display:flex;flex-direction:column;padding:24px 0;backdrop-filter:blur(20px);position:fixed;left:0;top:0;bottom:0;z-index:100;transition:transform 0.3s}
+.sidebar-brand{padding:0 24px 32px;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:12px}
+.sidebar-brand .logo-sm{width:40px;height:40px;background:linear-gradient(135deg,var(--blue),var(--gold));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sidebar-brand span{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,var(--white),var(--gold-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sidebar-nav{flex:1;padding:24px 12px;display:flex;flex-direction:column;gap:4px}
+.nav-label{font-size:0.7rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);padding:8px 12px 4px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-sm);cursor:pointer;color:var(--text-muted);font-size:0.9rem;font-weight:500;transition:all 0.2s;position:relative}
+.nav-item:hover{background:rgba(255,255,255,0.05);color:var(--white)}
+.nav-item.active{background:rgba(30,95,212,0.15);color:var(--blue-glow);border:1px solid rgba(30,95,212,0.2)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;border-radius:2px;background:var(--blue-bright)}
+.nav-item .icon{font-size:1.1rem;width:22px;text-align:center}
+.sidebar-footer{padding:16px 12px 0;border-top:1px solid var(--card-border)}
+.user-chip{display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--radius-sm);background:var(--card-bg)}
+.user-avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--gold));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-info .uname{font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-info .urole{font-size:0.75rem;color:var(--text-muted)}
+
+/* ── MAIN ── */
+.main-content{margin-left:260px;flex:1;padding:32px;min-height:100vh;animation:fadeIn 0.3s ease}
+.view{display:none}
+.view.active{display:block;animation:slideUp 0.35s ease}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
+.topbar h1{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700}
+.topbar p{color:var(--text-muted);font-size:0.9rem;margin-top:2px}
+.topbar-actions{display:flex;gap:10px}
+
+/* ── CARDS ── */
+.card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius);padding:24px;backdrop-filter:blur(10px)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:28px}
+.stat-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius);padding:24px;position:relative;overflow:hidden;transition:transform 0.2s,border-color 0.2s}
+.stat-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,0.14)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card.blue::before{background:linear-gradient(90deg,var(--blue),var(--blue-bright))}
+.stat-card.gold::before{background:linear-gradient(90deg,var(--gold),var(--gold-light))}
+.stat-card.green::before{background:linear-gradient(90deg,#3ecf8e,#67e8b5)}
+.stat-card.red::before{background:linear-gradient(90deg,#e05252,#ff8a8a)}
+.stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:16px}
+.stat-icon.blue{background:rgba(30,95,212,0.2)}.stat-icon.gold{background:rgba(201,168,76,0.2)}
+.stat-icon.green{background:rgba(62,207,142,0.2)}.stat-icon.red{background:rgba(224,82,82,0.2)}
+.stat-value{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:700;line-height:1;margin-bottom:6px}
+.stat-label{color:var(--text-muted);font-size:0.82rem;font-weight:500}
+
+/* ── BALANCE CARD ── */
+.balance-card{background:linear-gradient(135deg,var(--navy-light) 0%,var(--blue) 100%);border:1px solid rgba(255,255,255,0.12);border-radius:24px;padding:32px;position:relative;overflow:hidden;margin-bottom:28px}
+.balance-card::after{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,0.05)}
+.balance-card::before{content:'';position:absolute;bottom:-40px;right:60px;width:140px;height:140px;border-radius:50%;background:rgba(201,168,76,0.1)}
+.bc-label{font-size:0.8rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.7);margin-bottom:8px}
+.bc-amount{font-family:'Playfair Display',serif;font-size:3rem;font-weight:700;margin-bottom:4px;position:relative;z-index:1}
+.bc-accno{font-size:0.85rem;color:rgba(255,255,255,0.6);letter-spacing:0.08em}
+.bc-row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px}
+.bc-name{font-size:1rem;font-weight:600}
+.bc-actions{display:flex;gap:10px}
+.bc-action-btn{padding:9px 18px;border-radius:10px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);color:var(--white);font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(10px)}
+.bc-action-btn:hover{background:rgba(255,255,255,0.25)}
+
+/* ── LAYOUT ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+.table-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.table-header h3{font-family:'Playfair Display',serif;font-size:1.15rem}
+.section-title{font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:20px}
+
+/* ── TRANSACTIONS ── */
+.tx-list{display:flex;flex-direction:column;gap:2px}
+.tx-item{display:flex;align-items:center;gap:16px;padding:14px 16px;border-radius:var(--radius-sm);transition:background 0.15s;cursor:default}
+.tx-item:hover{background:rgba(255,255,255,0.04)}
+.tx-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.tx-icon.in{background:rgba(62,207,142,0.15)}.tx-icon.out{background:rgba(224,82,82,0.15)}.tx-icon.tr{background:rgba(30,95,212,0.15)}
+.tx-info{flex:1}
+.tx-info .tx-type{font-size:0.88rem;font-weight:600}
+.tx-info .tx-date{font-size:0.78rem;color:var(--text-muted);margin-top:2px}
+.tx-amount{font-size:0.95rem;font-weight:700}
+.tx-amount.in{color:var(--success)}.tx-amount.out{color:var(--danger)}
+.tx-badge{font-size:0.7rem;font-weight:600;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.06em}
+.tx-badge.in{background:rgba(62,207,142,0.15);color:var(--success)}
+.tx-badge.out{background:rgba(224,82,82,0.15);color:var(--danger)}
+.tx-badge.tr{background:rgba(30,95,212,0.15);color:var(--blue-glow)}
+
+/* ── QUICK ACTIONS ── */
+.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.qa-btn{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 12px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius);cursor:pointer;transition:all 0.2s;color:var(--text-body)}
+.qa-btn:hover{background:rgba(30,95,212,0.1);border-color:rgba(30,95,212,0.3);color:var(--blue-glow);transform:translateY(-2px)}
+.qa-btn .qa-icon{font-size:1.5rem}
+.qa-btn span{font-size:0.8rem;font-weight:500;text-align:center}
+
+/* ── CHART SECTION ── */
+.chart-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius);padding:24px}
+.chart-tabs{display:flex;gap:8px;margin-bottom:20px}
+.chart-tab{padding:7px 14px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;color:var(--text-muted);border:1px solid transparent;transition:all 0.2s}
+.chart-tab.active{background:rgba(30,95,212,0.15);color:var(--blue-glow);border-color:rgba(30,95,212,0.3)}
+.chart-wrap{position:relative;height:220px}
+
+/* ── TRANSFER ── */
+.amount-display{text-align:center;padding:32px 0;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius);margin-bottom:24px}
+.amount-display .currency{font-size:1.5rem;color:var(--text-muted);vertical-align:super}
+.amount-display .big-amount{font-family:'Playfair Display',serif;font-size:4rem;font-weight:700;line-height:1;letter-spacing:-0.02em}
+.amount-display p{color:var(--text-muted);font-size:0.85rem;margin-top:8px}
+.receiver-card{display:flex;align-items:center;gap:14px;padding:16px;background:rgba(30,95,212,0.1);border:1px solid rgba(30,95,212,0.25);border-radius:var(--radius-sm);margin-bottom:20px;display:none}
+.receiver-card.show{display:flex}
+.receiver-avatar{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--gold));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem}
+.receiver-info .rname{font-weight:600;font-size:0.95rem}
+.receiver-info .raccno{font-size:0.8rem;color:var(--text-muted)}
+
+/* ── PIN INPUT ── */
+.pin-input-group{display:flex;gap:12px;justify-content:center;margin:16px 0}
+.pin-digit{
+  width:52px;height:60px;
+  background:var(--input-bg);
+  border:2px solid var(--card-border);
+  border-radius:12px;
+  font-size:1.5rem;font-weight:700;
+  text-align:center;color:var(--white);
+  font-family:'DM Sans',sans-serif;
+  transition:all 0.2s;outline:none;
+}
+.pin-digit:focus{border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(45,126,247,0.2)}
+.pin-digit.filled{border-color:var(--gold);color:var(--gold)}
+.pin-digit.error{border-color:var(--danger);animation:shake 0.3s ease}
+
+/* ── ADMIN TABLE ── */
+.admin-table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:0.875rem}
+thead tr{background:rgba(255,255,255,0.04);border-bottom:1px solid var(--card-border)}
+thead th{padding:12px 16px;text-align:left;color:var(--text-muted);font-weight:600;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em}
+tbody tr{border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s}
+tbody tr:hover{background:rgba(255,255,255,0.03)}
+tbody td{padding:14px 16px;color:var(--text-body)}
+tbody td:first-child{color:var(--white);font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:600}
+.badge-active{background:rgba(62,207,142,0.15);color:var(--success)}
+.badge-locked{background:rgba(224,82,82,0.15);color:var(--danger)}
+
+/* ── PROFILE ── */
+.profile-header{display:flex;align-items:center;gap:20px;padding:28px;background:linear-gradient(135deg,var(--navy-light),var(--navy-mid));border:1px solid var(--card-border);border-radius:var(--radius);margin-bottom:24px}
+.profile-avatar-lg{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,var(--blue),var(--gold));display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;flex-shrink:0}
+.profile-accno{margin-top:8px;font-family:monospace;font-size:0.9rem;color:var(--gold-light);letter-spacing:0.15em}
+
+/* ── STATEMENT ── */
+.month-picker{display:flex;gap:12px;align-items:center;margin-bottom:20px}
+.month-picker input[type=month]{background:var(--input-bg);border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:0.875rem;outline:none;color-scheme:dark}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.show{display:flex;animation:fadeIn 0.2s ease}
+.modal{background:var(--navy-mid);border:1px solid var(--card-border);border-radius:24px;padding:32px;width:100%;max-width:440px;animation:slideUp 0.3s ease}
+.modal h3{font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:6px}
+.modal p{color:var(--text-muted);font-size:0.875rem;margin-bottom:24px}
+.modal-actions{display:flex;gap:10px;margin-top:24px}
+.modal-actions .btn{flex:1}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:32px;right:32px;z-index:9999;padding:14px 20px;border-radius:var(--radius-sm);font-size:0.875rem;font-weight:500;display:flex;align-items:center;gap:10px;transform:translateY(100px);opacity:0;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast-success{background:#0d2e1e;border:1px solid rgba(62,207,142,0.3);color:var(--success)}
+.toast-error{background:#2e0d0d;border:1px solid rgba(224,82,82,0.3);color:var(--danger)}
+.toast-info{background:#0d1e2e;border:1px solid rgba(30,95,212,0.3);color:var(--blue-glow)}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── MISC ── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+.empty-state{text-align:center;padding:48px 24px;color:var(--text-muted)}
+.empty-state .es-icon{font-size:3rem;margin-bottom:12px}
+.empty-state p{font-size:0.9rem}
+hr.divider-line{border:none;border-top:1px solid var(--card-border);margin:24px 0}
+.pin-status{display:flex;align-items:center;gap:8px;font-size:0.85rem;margin-bottom:16px}
+.pin-status.set{color:var(--success)}.pin-status.unset{color:var(--text-muted)}
+</style>
+</head>
+<body>
+
+<div class="global-loader" id="global-loader">
+  <div class="spinner"></div>
+  <p id="loader-text">Loading...</p>
+</div>
+
+<div class="page auth-page active" id="page-auth">
+  <div class="auth-container">
+    <div class="auth-brand">
+      <div class="logo-mark">🏦</div>
+      <h1>SecureBank</h1>
+      <p>Your trusted digital banking partner</p>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <div class="auth-tab active" onclick="switchTab('login')">Sign In</div>
+        <div class="auth-tab" onclick="switchTab('register')">Create Account</div>
+      </div>
+
+      <div id="form-login">
+        <div class="alert alert-error" id="login-error"></div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="login-email" placeholder="you@example.com"/>
+          <div class="field-error" id="err-login-email">Please enter a valid email.</div>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-password" placeholder="••••••••"
+                 onkeydown="if(event.key==='Enter') doLogin()"/>
+          <div class="field-error" id="err-login-password">Password is required.</div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:8px" onclick="doLogin()" id="btn-login">Sign In →</button>
+        <div class="divider">or</div>
+        <button class="btn btn-ghost" onclick="openModal('modal-admin-login')">🔐 Admin Login</button>
+      </div>
+
+      <div id="form-otp" style="display:none">
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="font-size:2.5rem;margin-bottom:12px">📧</div>
+          <h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:8px">Check your email</h3>
+          <p style="color:var(--text-muted);font-size:0.875rem">
+            We sent a 6-digit code to<br/>
+            <strong id="otp-email-display" style="color:var(--white)">—</strong>
+          </p>
+        </div>
+        <div class="alert alert-error" id="otp-error"></div>
+        <div class="form-group">
+          <label>6-Digit OTP</label>
+          <input type="text" id="otp-input" placeholder="000000" maxlength="6"
+                 inputmode="numeric" style="font-size:1.5rem;letter-spacing:0.4em;text-align:center"
+                 onkeydown="if(event.key==='Enter') doVerifyOtp()"/>
+        </div>
+        <button class="btn btn-primary" onclick="doVerifyOtp()" id="btn-verify-otp">Verify & Sign In →</button>
+        <div style="margin-top:16px;text-align:center">
+          <span style="color:var(--text-muted);font-size:0.85rem">Didn't receive it? </span>
+          <button class="btn btn-ghost btn-sm" onclick="doResendOtp()" id="btn-resend-otp"
+                  style="display:inline-flex;padding:6px 12px;font-size:0.82rem">Resend OTP</button>
+        </div>
+        <div style="margin-top:12px;text-align:center">
+          <button class="btn btn-ghost btn-sm" onclick="backToLogin()"
+                  style="display:inline-flex;padding:6px 12px;font-size:0.82rem;color:var(--text-muted)">
+            ← Back to login
+          </button>
+        </div>
+      </div>
+
+      <div id="form-register" style="display:none">
+        <div class="alert alert-error"   id="reg-error"></div>
+        <div class="alert alert-success" id="reg-success"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="reg-name" placeholder="John Doe"/>
+            <div class="field-error" id="err-reg-name">Name is required.</div>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="reg-email" placeholder="you@example.com"/>
+            <div class="field-error" id="err-reg-email">Valid email required.</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="reg-password" placeholder="min 6 chars"/>
+            <div class="field-error" id="err-reg-password">Min 6 characters.</div>
+          </div>
+          <div class="form-group">
+            <label>Opening Balance (₹)</label>
+            <input type="number" id="reg-balance" placeholder="1000"/>
+            <div class="field-error" id="err-reg-balance">Enter a valid amount.</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="doRegister()" id="btn-register">Create Account →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page app-page" id="page-app">
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo-sm">🏦</div>
+      <span>SecureBank</span>
+    </div>
+    <div class="sidebar-nav" id="sidebar-nav"></div>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="sidebar-avatar">?</div>
+        <div class="user-info">
+          <div class="uname" id="sidebar-name">─</div>
+          <div class="urole" id="sidebar-role">Personal Account</div>
+        </div>
+        <button class="btn btn-icon btn-danger btn-sm" onclick="doLogout()" title="Logout">🚪</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+
+    <div class="view active" id="view-dashboard">
+      <div class="topbar">
+        <div>
+          <h1>Good morning, <span id="dash-name">User</span> 👋</h1>
+          <p>Here's your financial overview</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost btn-sm" onclick="refreshDashboard()">🔄 Refresh</button>
+        </div>
+      </div>
+      <div class="balance-card">
+        <div class="bc-label">Total Balance</div>
+        <div class="bc-amount" id="dash-balance">₹0.00</div>
+        <div class="bc-accno" id="dash-accno">ACC: ──────────</div>
+        <div class="bc-row">
+          <div class="bc-name" id="dash-fullname">─</div>
+          <div class="bc-actions">
+            <button class="bc-action-btn" onclick="showView('transfer')">⬆ Send</button>
+            <button class="bc-action-btn" onclick="openModal('modal-deposit')">⬇ Deposit</button>
+          </div>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <div class="qa-btn" onclick="showView('transfer')"><div class="qa-icon">💸</div><span>Transfer</span></div>
+        <div class="qa-btn" onclick="openModal('modal-deposit')"><div class="qa-icon">📥</div><span>Deposit</span></div>
+        <div class="qa-btn" onclick="openModal('modal-withdraw')"><div class="qa-icon">📤</div><span>Withdraw</span></div>
+        <div class="qa-btn" onclick="showView('analytics')"><div class="qa-icon">📊</div><span>Analytics</span></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="table-header">
+            <h3>Recent Transactions</h3>
+            <button class="btn btn-ghost btn-sm" onclick="showView('transactions')">View All</button>
+          </div>
+          <div class="tx-list" id="dash-recent-tx">
+            <div class="empty-state"><div class="es-icon">📭</div><p>No transactions yet</p></div>
+          </div>
+        </div>
+        <div>
+          <div class="stat-grid" style="grid-template-columns:1fr 1fr;margin-bottom:0;gap:14px">
+            <div class="stat-card blue"><div class="stat-icon blue">💰</div><div class="stat-value" id="stat-deposits">₹0</div><div class="stat-label">Deposited</div></div>
+            <div class="stat-card red"><div class="stat-icon red">💸</div><div class="stat-value" id="stat-withdrawals">₹0</div><div class="stat-label">Withdrawn</div></div>
+            <div class="stat-card green"><div class="stat-icon green">📨</div><div class="stat-value" id="stat-transfers-in">₹0</div><div class="stat-label">Received</div></div>
+            <div class="stat-card gold"><div class="stat-icon gold">📤</div><div class="stat-value" id="stat-transfers-out">₹0</div><div class="stat-label">Sent</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-analytics">
+      <div class="topbar"><div><h1>Spending Analytics</h1><p>Visual breakdown of your transactions</p></div></div>
+      <div class="grid-2" style="margin-bottom:20px">
+        <div class="chart-card">
+          <h3 class="section-title">Income vs Expenses</h3>
+          <div class="chart-tabs">
+            <div class="chart-tab active" onclick="switchChartPeriod('all',this)">All Time</div>
+            <div class="chart-tab" onclick="switchChartPeriod('month',this)">This Month</div>
+            <div class="chart-tab" onclick="switchChartPeriod('week',this)">This Week</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-bar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="section-title">Transaction Breakdown</h3>
+          <div class="chart-wrap" style="height:240px"><canvas id="chart-doughnut"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3 class="section-title">Balance Over Time</h3>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-line"></canvas></div>
+      </div>
+    </div>
+
+    <div class="view" id="view-transfer">
+      <div class="topbar"><div><h1>Transfer Funds</h1><p>Send money securely with PIN verification</p></div></div>
+      <div style="max-width:540px">
+        <div class="card" style="margin-bottom:20px">
+          <div class="section-title">Enter Amount</div>
+          <div class="amount-display">
+            <span class="currency">₹</span>
+            <span class="big-amount" id="transfer-display">0</span>
+            <p>Available: <span id="transfer-available">₹0.00</span></p>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+            <button class="btn btn-ghost btn-sm" onclick="setAmount(500)">₹500</button>
+            <button class="btn btn-ghost btn-sm" onclick="setAmount(1000)">₹1,000</button>
+            <button class="btn btn-ghost btn-sm" onclick="setAmount(5000)">₹5,000</button>
+          </div>
+          <div class="form-group">
+            <label>Custom Amount (₹)</label>
+            <input type="number" id="transfer-amount" placeholder="Enter amount" oninput="updateTransferDisplay()"/>
+            <div class="field-error" id="err-transfer-amount">Enter a valid positive amount.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">Recipient Details</div>
+          <div class="form-group">
+            <label>Account Number</label>
+            <input type="text" id="transfer-accno" placeholder="10-digit account number" maxlength="10" oninput="lookupReceiver()"/>
+            <div class="field-error" id="err-transfer-accno">Enter a valid 10-digit account number.</div>
+          </div>
+          <div class="receiver-card" id="receiver-card">
+            <div class="receiver-avatar" id="recv-avatar">?</div>
+            <div class="receiver-info">
+              <div class="rname" id="recv-name">─</div>
+              <div class="raccno" id="recv-accno">─</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Note (optional)</label>
+            <input type="text" id="transfer-note" placeholder="What's this for?"/>
+          </div>
+          <button class="btn btn-primary" onclick="doTransfer()">Continue to PIN →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-transactions">
+      <div class="topbar">
+        <div><h1>Transaction History</h1><p>All your account activity</p></div>
+        <div class="topbar-actions">
+          <select id="tx-filter" onchange="filterTransactions()" style="background:var(--card-bg);border:1px solid var(--card-border);color:var(--white);padding:9px 14px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.85rem;cursor:pointer;outline:none">
+            <option value="ALL">All Types</option>
+            <option value="DEPOSIT">Deposits</option>
+            <option value="WITHDRAW">Withdrawals</option>
+            <option value="TRANSFER_IN">Received</option>
+            <option value="TRANSFER_OUT">Sent</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="showView('statement')">📄 Statement</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tx-list" id="all-tx-list">
+          <div class="empty-state"><div class="es-icon">📭</div><p>No transactions yet</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-loans">
+      <div class="topbar">
+        <div><h1>Loans</h1><p>Apply and track your loan requests</p></div>
+        <button class="btn btn-ghost btn-sm" onclick="renderLoans()">🔄 Refresh</button>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:24px">
+
+        <div class="card">
+          <div class="section-title">Apply for a Loan</div>
+          <div class="alert alert-error"   id="loan-error"></div>
+          <div class="alert alert-success" id="loan-success"></div>
+          <div class="form-group">
+            <label>Loan Amount (₹)</label>
+            <input type="number" id="loan-amount" placeholder="Min ₹1,000 — Max ₹10,00,000"
+                   oninput="updateEmi()"/>
+          </div>
+          <div class="form-group">
+            <label>Purpose</label>
+            <select id="loan-purpose">
+              <option value="Personal Loan">Personal Loan</option>
+              <option value="Home Loan">Home Loan</option>
+              <option value="Education Loan">Education Loan</option>
+              <option value="Vehicle Loan">Vehicle Loan</option>
+              <option value="Business Loan">Business Loan</option>
+              <option value="Medical Loan">Medical Loan</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Repayment Term</label>
+            <select id="loan-term" onchange="updateEmi()">
+              <option value="6">6 months</option>
+              <option value="12" selected>12 months</option>
+              <option value="24">24 months</option>
+              <option value="36">36 months</option>
+              <option value="48">48 months</option>
+              <option value="60">60 months</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="applyLoan()" id="btn-apply-loan">
+            🏦 Submit Application
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="section-title">EMI Preview <span style="font-size:0.75rem;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-weight:400">@ 12% p.a.</span></div>
+          <div id="emi-preview-empty" style="text-align:center;padding:32px 0;color:var(--text-muted)">
+            <div style="font-size:2rem;margin-bottom:8px">🧮</div>
+            <p style="font-size:0.875rem">Enter an amount to see your EMI</p>
+          </div>
+          <div id="emi-preview" style="display:none">
+            <div style="text-align:center;padding:20px 0 24px;border-bottom:1px solid var(--card-border);margin-bottom:20px">
+              <div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Monthly EMI</div>
+              <div id="emi-amount" style="font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:700;color:var(--blue-glow)">₹0</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:var(--text-muted);font-size:0.875rem">Principal Amount</span>
+                <span id="emi-principal" style="font-weight:600">₹0</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:var(--text-muted);font-size:0.875rem">Total Interest</span>
+                <span id="emi-interest" style="font-weight:600;color:var(--danger)">₹0</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--card-border)">
+                <span style="color:var(--text-muted);font-size:0.875rem">Total Payable</span>
+                <span id="emi-total" style="font-weight:700;font-size:1.1rem;color:var(--white)">₹0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">My Loan Applications</div>
+        <div id="loans-list">
+          <div class="empty-state"><div class="es-icon">⏳</div><p>Loading...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-statement">
+      <div class="topbar"><div><h1>Bank Statement</h1><p>Download your monthly statement as PDF</p></div></div>
+      <div style="max-width:500px">
+        <div class="card">
+          <div class="section-title">Generate Statement</div>
+          <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:20px">Select a month and click Download. A professionally formatted PDF will be saved directly to your device.</p>
+          <div class="form-group">
+            <label>Select Month</label>
+            <div class="month-picker">
+              <input type="month" id="stmt-month" style="flex:1"/>
+            </div>
+          </div>
+          <button class="btn btn-gold" onclick="downloadStatement()" id="btn-statement">
+            📄 Download PDF Statement
+          </button>
+          <div style="margin-top:16px;padding:14px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:10px;font-size:0.8rem;color:var(--gold-light)">
+            💡 <strong>Tip:</strong> The PDF includes your account summary, total credits & debits, and a full transaction log for the selected month.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-profile">
+      <div class="topbar"><div><h1>My Profile</h1><p>Account details & security settings</p></div></div>
+      <div class="profile-header">
+        <div class="profile-avatar-lg" id="profile-avatar">JD</div>
+        <div>
+          <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem" id="profile-name">─</h2>
+          <p style="color:var(--text-muted);font-size:0.875rem;margin-top:4px" id="profile-email">─</p>
+          <div class="profile-accno" id="profile-accno">─</div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:20px">
+        <div class="card">
+          <div class="section-title">Account Information</div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">Full Name</div><div id="info-name" style="font-weight:500">─</div></div>
+            <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">Email</div><div id="info-email" style="font-weight:500">─</div></div>
+            <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">Account Number</div><div id="info-accno" style="font-weight:500;font-family:monospace;color:var(--gold-light)">─</div></div>
+            <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">Balance</div><div id="info-balance" style="font-weight:700;font-size:1.2rem;color:var(--success)">─</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">Change Password</div>
+          <div class="alert alert-error"   id="pwd-error"></div>
+          <div class="alert alert-success" id="pwd-success"></div>
+          <div class="form-group"><label>Current Password</label><input type="password" id="pwd-current" placeholder="••••••••"/><div class="field-error" id="err-pwd-current">Required.</div></div>
+          <div class="form-group"><label>New Password</label><input type="password" id="pwd-new" placeholder="min 6 characters"/><div class="field-error" id="err-pwd-new">Min 6 characters.</div></div>
+          <div class="form-group"><label>Confirm New Password</label><input type="password" id="pwd-confirm" placeholder="••••••••"/><div class="field-error" id="err-pwd-confirm">Passwords do not match.</div></div>
+          <button class="btn btn-primary" onclick="doChangePassword()">Update Password</button>
+        </div>
+      </div>
+      <div class="card" style="max-width:500px">
+        <div class="section-title">Transaction PIN</div>
+        <div class="pin-status" id="pin-status-display">
+          <span>⚪</span><span>Checking PIN status...</span>
+        </div>
+        <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:20px">Set a 4-digit PIN that will be required for every fund transfer.</p>
+        <div class="alert alert-error"   id="set-pin-error"></div>
+        <div class="alert alert-success" id="set-pin-success"></div>
+        <div class="form-group"><label>Account Password (to verify it's you)</label><input type="password" id="set-pin-password" placeholder="Your account password"/></div>
+        <div class="form-group">
+          <label>New 4-Digit PIN</label>
+          <div class="pin-input-group" id="set-pin-inputs">
+            <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,0,'set')"/>
+            <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,1,'set')"/>
+            <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,2,'set')"/>
+            <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,3,'set')"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Confirm PIN</label>
+          <div class="pin-input-group" id="confirm-pin-inputs">
+            <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,0,'confirm')"/>
+            <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,1,'confirm')"/>
+            <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,2,'confirm')"/>
+            <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,3,'confirm')"/>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="doSetPin()">🔐 Set Transaction PIN</button>
+      </div>
+    </div>
+
+    <div class="view" id="view-settings">
+      <div class="topbar"><div><h1>Settings</h1><p>Preferences & account actions</p></div></div>
+      <div style="max-width:500px">
+        <div class="card" style="margin-bottom:20px">
+          <div class="section-title">Quick Actions</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <button class="btn btn-ghost" onclick="openModal('modal-deposit')">📥 Deposit Funds</button>
+            <button class="btn btn-ghost" onclick="openModal('modal-withdraw')">📤 Withdraw Funds</button>
+            <button class="btn btn-ghost" onclick="showView('statement')">📄 Download Statement</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">Danger Zone</div>
+          <button class="btn btn-danger" onclick="doLogout()">🚪 Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-admin-dashboard">
+      <div class="topbar"><div><h1>Admin Dashboard</h1><p>Bank-wide overview</p></div><button class="btn btn-danger btn-sm" onclick="doLogout()">Logout</button></div>
+      <div class="stat-grid" style="margin-bottom:28px">
+        <div class="stat-card blue"><div class="stat-icon blue">👥</div><div class="stat-value" id="admin-total-accounts">0</div><div class="stat-label">Total Accounts</div></div>
+        <div class="stat-card gold"><div class="stat-icon gold">💰</div><div class="stat-value" id="admin-total-balance">₹0</div><div class="stat-label">Bank Total Balance</div></div>
+        <div class="stat-card red"><div class="stat-icon red">🔒</div><div class="stat-value" id="admin-locked">0</div><div class="stat-label">Locked Accounts</div></div>
+        <div class="stat-card green"><div class="stat-icon green">📈</div><div class="stat-value" id="admin-total-tx">0</div><div class="stat-label">Total Transactions</div></div>
+      </div>
+      <div class="card">
+        <div class="table-header">
+          <h3>All Accounts</h3>
+          <input type="text" id="admin-search" placeholder="🔍 Search..." oninput="adminSearchAccounts()" style="background:var(--input-bg);border:1px solid var(--card-border);border-radius:10px;padding:9px 14px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:220px"/>
+        </div>
+        <div class="admin-table-wrap">
+          <table><thead><tr><th>Account No</th><th>Name</th><th>Email</th><th>Balance</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="admin-accounts-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+    <div class="view" id="view-admin-transactions">
+      <div class="topbar"><div><h1>All Transactions</h1><p>Bank-wide transaction log</p></div></div>
+      <div class="card"><div class="tx-list" id="admin-tx-list"><div class="empty-state"><div class="es-icon">📭</div><p>No transactions</p></div></div></div>
+    </div>
+
+    <div class="view" id="view-admin-loans">
+      <div class="topbar">
+        <div><h1>Loan Requests</h1><p>Review and process pending applications</p></div>
+        <button class="btn btn-primary btn-sm" onclick="adminProcessLoan()" id="btn-process-loan">
+          ⚡ Process Next Pending
+        </button>
+      </div>
+      <div class="card">
+        <div class="tx-list" id="admin-loans-list">
+          <div class="empty-state"><div class="es-icon">📭</div><p>No loan requests</p></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-deposit">
+  <div class="modal">
+    <h3>💰 Deposit Funds</h3><p>Add money to your account</p>
+    <div class="alert alert-error" id="deposit-error"></div>
+    <div class="form-group"><label>Amount (₹)</label><input type="number" id="deposit-amount" placeholder="Enter amount"/><div class="field-error" id="err-deposit">Enter a valid positive amount.</div></div>
+    <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px">Max per deposit: ₹10,00,000</div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-deposit')">Cancel</button><button class="btn btn-primary" onclick="doDeposit()">Deposit →</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-withdraw">
+  <div class="modal">
+    <h3>📤 Withdraw Funds</h3><p>Withdraw money from your account</p>
+    <div class="alert alert-error" id="withdraw-error"></div>
+    <div class="form-group"><label>Amount (₹)</label><input type="number" id="withdraw-amount" placeholder="Enter amount"/><div class="field-error" id="err-withdraw">Enter a valid positive amount.</div></div>
+    <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px">Daily limit: ₹50,000 &nbsp;|&nbsp; Min balance maintained: ₹500 (Savings)</div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-withdraw')">Cancel</button><button class="btn btn-danger" onclick="doWithdraw()">Withdraw →</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pin">
+  <div class="modal">
+    <h3>🔐 Enter Transaction PIN</h3>
+    <p id="modal-pin-subtitle">Enter your 4-digit PIN to confirm the transfer</p>
+    <div class="alert alert-error" id="pin-error"></div>
+    <div class="pin-input-group" id="verify-pin-inputs">
+      <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,0,'verify')"/>
+      <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,1,'verify')"/>
+      <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,2,'verify')"/>
+      <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" oninput="pinNav(this,3,'verify')"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pin');pendingTransfer=null">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmTransfer()">Confirm Transfer →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-admin-login">
+  <div class="modal">
+    <h3>🔐 Admin Login</h3>
+    <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:16px">Restricted access — authorised personnel only.</p>
+    <div class="alert alert-error" id="admin-login-error"></div>
+    <div class="form-group">
+      <label>Admin Username</label>
+      <input type="text" id="admin-user-input" placeholder="admin"/>
+    </div>
+    <div class="form-group">
+      <label>Admin Password</label>
+      <input type="password" id="admin-pass-input" placeholder="••••••••"
+             onkeydown="if(event.key==='Enter') doAdminLogin()"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-admin-login')">Cancel</button>
+      <button class="btn btn-primary" onclick="doAdminLogin()" id="btn-admin-login">Login →</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-icon">✅</span><span id="toast-msg">Done!</span></div>
+
+<script>
+// ─── CONFIG ───
+const API = 'http://localhost:8082/api';
+
+let currentUser    = null;
+let authToken      = null; 
+let isAdmin        = false;
+let pendingTransfer = null;
+let allTxCache     = [];
+let chartBar, chartDoughnut, chartLine;
+
+function apiFetch(url, options = {}) {
+    // Automatically attach the JWT token to every request
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+    };
+    if (authToken) {
+        headers['Authorization'] = 'Bearer ' + authToken;
+    }
+    return fetch(url, { ...options, headers }).then(res => {
+        // Auto-logout if token expired (401)
+        if (res.status === 401) {
+            authToken   = null;
+            currentUser = null;
+            showPage('page-auth');
+            showToast('Session expired. Please log in again.', 'error');
+            throw new Error('Unauthorized');
+        }
+        return res;
+    });
+}
+
+// ─── LOADER ───
+function showLoader(text='Loading...') {
+  document.getElementById('loader-text').textContent = text;
+  document.getElementById('global-loader').classList.add('show');
+}
+function hideLoader() { document.getElementById('global-loader').classList.remove('show'); }
+
+// ─── BUTTON LOADING STATE ───
+function setBtnLoading(id, loading, text='') {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) { btn.dataset.orig = btn.innerHTML; btn.innerHTML = `<div class="spinner-sm"></div> ${text||'Please wait...'}`; }
+  else btn.innerHTML = btn.dataset.orig || btn.innerHTML;
+}
+
+// ─── VALIDATION ───
+function setFieldError(inputId, errId, show) {
+  const input = document.getElementById(inputId);
+  const err   = document.getElementById(errId);
+  if (!input || !err) return;
+  input.classList.toggle('input-error', show);
+  input.classList.toggle('input-success', !show && input.value.trim());
+  err.classList.toggle('show', show);
+}
+function clearFieldErrors(...ids) {
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('input-error','input-success'); }
+  });
+  document.querySelectorAll('.field-error').forEach(e => e.classList.remove('show'));
+}
+
+// ─── TOAST ───
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  const icons = {success:'✅',error:'❌',info:'ℹ️'};
+  t.className = `toast toast-${type}`;
+  document.getElementById('toast-icon').textContent = icons[type]||'ℹ️';
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ─── ALERTS ───
+function showAlert(id, msg) { const e=document.getElementById(id); if(e){e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),5000);} }
+function clearAlert(id)     { const e=document.getElementById(id); if(e){e.textContent='';e.classList.remove('show');} }
+
+// ─── MODALS ───
+function openModal(id)  { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click', e=>{ if(e.target===o) o.classList.remove('show'); });
+});
+
+// ─── UTILS ───
+const fmt = n => '₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const initials = name => name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+
+// ─── AUTH TABS ───
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('form-login').style.display    = tab==='login'    ? 'block':'none';
+  document.getElementById('form-register').style.display = tab==='register' ? 'block':'none';
+}
+
+// ─── LOGIN (Step 1 — password) ───
+let pendingOtpEmail = null;
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  clearFieldErrors('login-email','login-password');
+  clearAlert('login-error');
+
+  let valid = true;
+  if (!email || !/\S+@\S+\.\S+/.test(email)) { setFieldError('login-email','err-login-email',true); valid=false; }
+  if (!password)                               { setFieldError('login-password','err-login-password',true); valid=false; }
+  if (!valid) return;
+
+  setBtnLoading('btn-login', true, 'Signing in...');
+  try {
+    const res = await apiFetch(API + '/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+        showAlert('login-error', '❌ ' + (data.error || data.message || 'Login failed.'));
+        return;
+    }
+
+    if (data.status === 'otp_required' || data.status === 'otp_sent') {
+      pendingOtpEmail = email;
+      document.getElementById('form-login').style.display = 'none';
+      document.getElementById('form-otp').style.display   = 'block';
+      document.getElementById('otp-email-display').textContent = email;
+      document.getElementById('otp-input').value = '';
+      clearAlert('otp-error');
+      setTimeout(() => document.getElementById('otp-input').focus(), 100);
+      showToast('OTP sent to ' + email + ' 📧', 'info');
+      return;
+    }
+
+    authToken = data.token;
+    currentUser = data;
+    isAdmin = false;
+    loadApp();
+  } catch(e) {
+    showAlert('login-error', '❌ Cannot connect to server. Is it running?');
+  } finally {
+    setBtnLoading('btn-login', false);
+  }
+}
+
+// ─── LOGIN (Step 2 — OTP verify) ───
+async function doVerifyOtp() {
+  const otp = document.getElementById('otp-input').value.trim();
+  clearAlert('otp-error');
+
+  if (!otp || otp.length !== 6) {
+    showAlert('otp-error', '❌ Please enter the 6-digit OTP.');
+    return;
+  }
+
+  setBtnLoading('btn-verify-otp', true, 'Verifying...');
+  try {
+    const res = await apiFetch(API + '/auth/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email: pendingOtpEmail, otp })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+        showAlert('otp-error', '❌ ' + (data.error || data.message || 'Invalid OTP.'));
+        document.getElementById('otp-input').select();
+        return;
+    }
+
+    authToken = data.token;
+    currentUser = data;
+    isAdmin = false;
+    pendingOtpEmail = null;
+    
+    // Reset auth form for next logout
+    document.getElementById('form-otp').style.display   = 'none';
+    document.getElementById('form-login').style.display = 'block';
+    document.getElementById('login-email').value    = '';
+    document.getElementById('login-password').value = '';
+    loadApp();
+  } catch(e) {
+    showAlert('otp-error', '❌ Server error. Please try again.');
+  } finally {
+    setBtnLoading('btn-verify-otp', false);
+  }
+}
+
+// ─── RESEND OTP ───
+async function doResendOtp() {
+  if (!pendingOtpEmail) return;
+  setBtnLoading('btn-resend-otp', true, 'Sending...');
+  try {
+    const res = await apiFetch(API + '/auth/resend-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email: pendingOtpEmail })
+    });
+    const data = await res.json();
+    
+    if (res.ok || data.status === 'success') {
+      showToast('New OTP sent to ' + pendingOtpEmail + ' 📧', 'info');
+      document.getElementById('otp-input').value = '';
+      clearAlert('otp-error');
+    } else {
+      showAlert('otp-error', '❌ ' + (data.error || data.message));
+    }
+  } catch(e) {
+    showAlert('otp-error', '❌ Could not resend OTP.');
+  } finally {
+    setBtnLoading('btn-resend-otp', false);
+  }
+}
+
+// ─── BACK TO LOGIN ───
+function backToLogin() {
+  pendingOtpEmail = null;
+  document.getElementById('form-otp').style.display   = 'none';
+  document.getElementById('form-login').style.display = 'block';
+  clearAlert('otp-error');
+  clearAlert('login-error');
+}
+
+// ─── REGISTER ───
+async function doRegister() {
+  const name    = document.getElementById('reg-name').value.trim();
+  const email   = document.getElementById('reg-email').value.trim();
+  const password= document.getElementById('reg-password').value;
+  const balance = document.getElementById('reg-balance').value;
+  clearFieldErrors('reg-name','reg-email','reg-password','reg-balance');
+  clearAlert('reg-error'); clearAlert('reg-success');
+
+  let valid = true;
+  if (!name)                                    { setFieldError('reg-name','err-reg-name',true);     valid=false; }
+  if (!email||!/\S+@\S+\.\S+/.test(email))      { setFieldError('reg-email','err-reg-email',true);   valid=false; }
+  if (!password||password.length<6)             { setFieldError('reg-password','err-reg-password',true); valid=false; }
+  if (!balance||isNaN(balance)||balance<0)      { setFieldError('reg-balance','err-reg-balance',true); valid=false; }
+  if (!valid) return;
+
+  setBtnLoading('btn-register',true,'Creating...');
+  try {
+    const res = await apiFetch(API + '/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password, initialDeposit: balance })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+        showAlert('reg-error','❌ ' + (data.error || data.message || 'Registration failed.'));
+        return;
+    }
+
+    authToken = data.token;
+    currentUser = data;
+    isAdmin = false;
+    document.getElementById('reg-name').value=document.getElementById('reg-email').value=document.getElementById('reg-password').value=document.getElementById('reg-balance').value='';
+    loadApp();
+  } catch(e) { showAlert('reg-error','❌ Cannot connect to server.'); }
+  finally { setBtnLoading('btn-register',false); }
+}
+
+// ─── ADMIN LOGIN ───
+async function doAdminLogin() {
+  const username = document.getElementById('admin-user-input').value.trim();
+  const password = document.getElementById('admin-pass-input').value;
+  clearAlert('admin-login-error');
+  if (!username || !password) { showAlert('admin-login-error','❌ Username and password required.'); return; }
+
+  setBtnLoading('btn-admin-login', true, 'Verifying...');
+  try {
+    const res = await apiFetch(API + '/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+        showAlert('admin-login-error', '❌ ' + (data.error || data.message || 'Invalid credentials.'));
+        return;
+    }
+
+    authToken = data.token;
+    isAdmin = true;
+    currentUser = { name: 'Administrator' };
+    closeModal('modal-admin-login');
+    document.getElementById('admin-user-input').value = '';
+    document.getElementById('admin-pass-input').value = '';
+    loadAdminApp();
+  } catch(e) {
+    showAlert('admin-login-error', '❌ Cannot connect to server.');
+  } finally {
+    setBtnLoading('btn-admin-login', false);
+  }
+}
+
+function doLogout() {
+  authToken = null;
+  currentUser = null;
+  isAdmin = false;
+  showPage('page-auth');
+  document.getElementById('login-email').value='';
+  document.getElementById('login-password').value='';
+  showToast('Logged out successfully.','info');
+}
+
+// ─── PAGE / VIEW NAV ───
+function showPage(id) { document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    n.classList.toggle('active', n.dataset.view===name);
+  });
+  if(name==='dashboard')           refreshDashboard();
+  if(name==='analytics')           renderCharts();
+  if(name==='transactions')        renderAllTransactions();
+  if(name==='loans')               renderLoans();
+  if(name==='profile')             renderProfile();
+  if(name==='admin-dashboard')     renderAdminDashboard();
+  if(name==='admin-transactions')  renderAdminTransactions();
+  if(name==='admin-loans')         renderAdminLoans();
+}
+
+// ─── LOAD APP ───
+function loadApp() {
+  document.getElementById('sidebar-nav').innerHTML = `
+    <div class="nav-label">Main</div>
+    <div class="nav-item active" data-view="dashboard" onclick="showView('dashboard')"><span class="icon">📊</span> Dashboard</div>
+    <div class="nav-item" data-view="analytics" onclick="showView('analytics')"><span class="icon">📈</span> Analytics</div>
+    <div class="nav-item" data-view="transfer" onclick="showView('transfer')"><span class="icon">↗️</span> Transfer</div>
+    <div class="nav-item" data-view="transactions" onclick="showView('transactions')"><span class="icon">📋</span> Transactions</div>
+    <div class="nav-item" data-view="loans" onclick="showView('loans')"><span class="icon">🏦</span> Loans</div>
+    <div class="nav-item" data-view="statement" onclick="showView('statement')"><span class="icon">📄</span> Statement</div>
+    <div class="nav-label" style="margin-top:12px">Account</div>
+    <div class="nav-item" data-view="profile" onclick="showView('profile')"><span class="icon">👤</span> Profile & PIN</div>
+    <div class="nav-item" data-view="settings" onclick="showView('settings')"><span class="icon">⚙️</span> Settings</div>`;
+  document.getElementById('sidebar-name').textContent = currentUser.name;
+  document.getElementById('sidebar-role').textContent = 'Personal Account';
+  document.getElementById('sidebar-avatar').textContent = initials(currentUser.name);
+  // Set default statement month
+  const now = new Date(); document.getElementById('stmt-month').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  showPage('page-app');
+  showView('dashboard');
+}
+
+function loadAdminApp() {
+  document.getElementById('sidebar-nav').innerHTML = `
+    <div class="nav-label">Admin</div>
+    <div class="nav-item active" data-view="admin-dashboard" onclick="showView('admin-dashboard')"><span class="icon">🏛️</span> Overview</div>
+    <div class="nav-item" data-view="admin-transactions" onclick="showView('admin-transactions')"><span class="icon">📋</span> All Transactions</div>
+    <div class="nav-item" data-view="admin-loans" onclick="showView('admin-loans')"><span class="icon">🏦</span> Loan Requests</div>`;
+  document.getElementById('sidebar-name').textContent = 'Administrator';
+  document.getElementById('sidebar-role').textContent = 'Admin Access';
+  document.getElementById('sidebar-avatar').textContent = 'AD';
+  showPage('page-app');
+  showView('admin-dashboard');
+}
+
+// ─── DASHBOARD ───
+async function refreshDashboard() {
+  try {
+    const accRes = await apiFetch(API + '/auth/account');
+    const data = await accRes.json();
+    if(accRes.ok || data.status==='success') {
+      currentUser={...currentUser,...data};
+      document.getElementById('dash-name').textContent    = currentUser.name.split(' ')[0];
+      document.getElementById('dash-balance').textContent  = fmt(currentUser.balance);
+      document.getElementById('dash-accno').textContent    = 'ACC: '+currentUser.account_number;
+      document.getElementById('dash-fullname').textContent = currentUser.name;
+      document.getElementById('transfer-available').textContent = fmt(currentUser.balance);
+    }
+
+    const txRes = await apiFetch(API + '/transactions?type=ALL&limit=100');
+    const txData = await txRes.json();
+    if(txRes.ok || txData.status==='success') {
+      allTxCache = txData.transactions || [];
+      const sum = type => allTxCache.filter(t=>t.type===type).reduce((s,t)=>s+t.amount,0);
+      document.getElementById('stat-deposits').textContent      = fmt(sum('DEPOSIT'));
+      document.getElementById('stat-withdrawals').textContent   = fmt(sum('WITHDRAW'));
+      document.getElementById('stat-transfers-in').textContent  = fmt(sum('TRANSFER_IN'));
+      document.getElementById('stat-transfers-out').textContent = fmt(sum('TRANSFER_OUT'));
+      const container = document.getElementById('dash-recent-tx');
+      container.innerHTML = allTxCache.length ? allTxCache.slice(0,5).map(txRow).join('') :
+        '<div class="empty-state"><div class="es-icon">📭</div><p>No transactions yet</p></div>';
+    }
+  } catch(e) { showToast('Could not load dashboard. Is Tomcat running?','error'); }
+}
+
+// ─── TX ROW ───
+function txRow(tx) {
+  const icons={DEPOSIT:'📥',WITHDRAW:'📤',TRANSFER_IN:'📨',TRANSFER_OUT:'📤'};
+  const cls={DEPOSIT:'in',WITHDRAW:'out',TRANSFER_IN:'in',TRANSFER_OUT:'out'};
+  const sign=['DEPOSIT','TRANSFER_IN'].includes(tx.type)?'+':'-';
+  const c=cls[tx.type]||'tr';
+  return `<div class="tx-item">
+    <div class="tx-icon ${c}">${icons[tx.type]||'💱'}</div>
+    <div class="tx-info"><div class="tx-type">${tx.description||tx.type}</div><div class="tx-date">${tx.created_at}</div></div>
+    <div style="text-align:right"><div class="tx-amount ${c}">${sign}${fmt(tx.amount)}</div><span class="tx-badge ${c}">${tx.type.replace('_',' ')}</span></div>
+  </div>`;
+}
+
+// ─── DEPOSIT / WITHDRAW ───
+async function doDeposit() {
+  const amount = document.getElementById('deposit-amount').value;
+  clearAlert('deposit-error');
+  setFieldError('deposit-amount','err-deposit',!amount||amount<=0);
+  if(!amount||amount<=0) return;
+  showLoader('Processing deposit...');
+  try {
+    const res = await apiFetch(API + '/transactions/deposit', {
+        method: 'POST',
+        body: JSON.stringify({ amount })
+    });
+    const data = await res.json();
+    if(res.ok || data.status==='success') {
+      currentUser.balance = data.newBalance || data.balance;
+      closeModal('modal-deposit');
+      document.getElementById('deposit-amount').value='';
+      await refreshDashboard();
+      showToast(`₹${Number(amount).toLocaleString('en-IN')} deposited! 🎉`);
+    } else {
+      showAlert('deposit-error', '❌ ' + (data.error || data.message));
+    }
+  } catch(e) { showToast('Server error','error'); }
+  finally { hideLoader(); }
+}
+
+async function doWithdraw() {
+  const amount = document.getElementById('withdraw-amount').value;
+  clearAlert('withdraw-error');
+  setFieldError('withdraw-amount','err-withdraw',!amount||amount<=0);
+  if(!amount||amount<=0) return;
+  showLoader('Processing withdrawal...');
+  try {
+    const res = await apiFetch(API + '/transactions/withdraw', {
+        method: 'POST',
+        body: JSON.stringify({ amount })
+    });
+    const data = await res.json();
+    if(res.ok || data.status==='success') {
+      currentUser.balance = data.newBalance || data.balance;
+      closeModal('modal-withdraw');
+      document.getElementById('withdraw-amount').value='';
+      await refreshDashboard();
+      showToast(`₹${Number(amount).toLocaleString('en-IN')} withdrawn!`);
+    } else {
+      showAlert('withdraw-error', '❌ ' + (data.error || data.message));
+    }
+  } catch(e) { showToast('Server error','error'); }
+  finally { hideLoader(); }
+}
+
+// ─── TRANSFER ───
+function updateTransferDisplay() {
+  const v=document.getElementById('transfer-amount').value;
+  document.getElementById('transfer-display').textContent = v?Number(v).toLocaleString('en-IN'):'0';
+}
+function setAmount(n) { document.getElementById('transfer-amount').value=n; updateTransferDisplay(); }
+
+async function lookupReceiver() {
+  const accNo=document.getElementById('transfer-accno').value.trim();
+  const card=document.getElementById('receiver-card');
+  if(accNo.length!==10){card.classList.remove('show');return;}
+  try {
+    const res = await apiFetch(API + '/transfer/lookup?accountNo=' + accNo);
+    const data = await res.json();
+    if((res.ok || data.status==='success') && data.id!==currentUser.id){
+      document.getElementById('recv-avatar').textContent=initials(data.name);
+      document.getElementById('recv-name').textContent=data.name;
+      document.getElementById('recv-accno').textContent='ACC: '+data.account_number;
+      card.classList.add('show');
+    } else { card.classList.remove('show'); }
+  } catch(e){ card.classList.remove('show'); }
+}
+
+async function doTransfer() {
+  const accNo  = document.getElementById('transfer-accno').value.trim();
+  const amount = document.getElementById('transfer-amount').value;
+  const note   = document.getElementById('transfer-note').value.trim()||'Fund transfer';
+  let valid=true;
+  if(!amount||amount<=0)         { setFieldError('transfer-amount','err-transfer-amount',true); valid=false; }
+  if(!accNo||accNo.length!==10)  { setFieldError('transfer-accno','err-transfer-accno',true);  valid=false; }
+  if(!valid) return;
+
+  const recvRes = await apiFetch(API + '/transfer/lookup?accountNo=' + accNo);
+  const recv = await recvRes.json();
+  if(!recvRes.ok || recv.status!=='success' && !recv.id) { showToast('Account not found','error'); return; }
+  if(recv.id===currentUser.id)      { showToast('Cannot transfer to yourself','error'); return; }
+
+  pendingTransfer={receiverAccNo:accNo,receiverName:recv.name,amount,note};
+  document.getElementById('modal-pin-subtitle').textContent =
+    `Sending ${fmt(amount)} to ${recv.name}. Enter your 4-digit PIN.`;
+  clearPinInputs('verify'); clearAlert('pin-error');
+  openModal('modal-pin');
+  document.querySelector('#verify-pin-inputs .pin-digit').focus();
+}
+
+async function confirmTransfer() {
+  if(!pendingTransfer) return;
+  const pin = getPinValue('verify');
+  if(pin.length!==4) { showAlert('pin-error','❌ Enter all 4 digits.'); return; }
+
+  showLoader('Verifying PIN...');
+  try {
+    const pinRes = await apiFetch(API + '/pin/verify', {
+        method: 'POST',
+        body: JSON.stringify({ pin })
+    });
+    const pinCheck = await pinRes.json();
+    if(!pinRes.ok || pinCheck.status!=='success' && pinCheck.error) { 
+        hideLoader(); clearAlert('pin-error'); 
+        showAlert('pin-error','❌ '+(pinCheck.error || pinCheck.message)); 
+        setPinError('verify'); return; 
+    }
+
+    document.getElementById('loader-text').textContent='Processing transfer...';
+    const {receiverAccNo,receiverName,amount,note}=pendingTransfer;
+    const transRes = await apiFetch(API + '/transfer', {
+        method: 'POST',
+        body: JSON.stringify({ receiverAccNo, amount, note })
+    });
+    const data = await transRes.json();
+    
+    closeModal('modal-pin'); pendingTransfer=null;
+    if(transRes.ok || data.status==='success') {
+      currentUser.balance = data.newBalance || data.balance;
+      document.getElementById('transfer-amount').value='';
+      document.getElementById('transfer-accno').value='';
+      document.getElementById('receiver-card').classList.remove('show');
+      document.getElementById('transfer-display').textContent='0';
+      await refreshDashboard();
+      showToast(`${fmt(amount)} sent to ${receiverName}! ✈️`);
+    } else {
+      showToast('❌ ' + (data.error || data.message || 'Transfer failed'), 'error');
+    }
+  } catch(e){ showToast('Transfer failed','error'); }
+  finally { hideLoader(); }
+}
+
+// ─── TRANSACTIONS ───
+async function renderAllTransactions() {
+  const filter=document.getElementById('tx-filter').value;
+  const container=document.getElementById('all-tx-list');
+  container.innerHTML='<div class="empty-state"><div class="es-icon">⏳</div><p>Loading...</p></div>';
+  try {
+    const res = await apiFetch(API + '/transactions?type=' + filter + '&limit=100');
+    const data = await res.json();
+    container.innerHTML=data.transactions&&data.transactions.length?data.transactions.map(txRow).join(''):
+      '<div class="empty-state"><div class="es-icon">📭</div><p>No transactions found</p></div>';
+  } catch(e){ container.innerHTML='<div class="empty-state"><div class="es-icon">❌</div><p>Could not load</p></div>'; }
+}
+function filterTransactions(){renderAllTransactions();}
+
+// ─── LOANS ───
+let emiDebounce = null;
+
+function updateEmi() {
+  clearTimeout(emiDebounce);
+  emiDebounce = setTimeout(async () => {
+    const amount = document.getElementById('loan-amount').value;
+    const term   = document.getElementById('loan-term').value;
+    if (!amount || amount <= 0) {
+      document.getElementById('emi-preview').style.display       = 'none';
+      document.getElementById('emi-preview-empty').style.display = 'block';
+      return;
+    }
+    try {
+      const res = await apiFetch(API + `/loans/emi?amount=${amount}&termMonths=${term}&ratePercent=12`);
+      const data = await res.json();
+      if (res.ok || data.status === 'success') {
+        document.getElementById('emi-preview-empty').style.display = 'none';
+        document.getElementById('emi-preview').style.display       = 'block';
+        document.getElementById('emi-amount').textContent    = fmt(data.emi);
+        document.getElementById('emi-principal').textContent = fmt(amount);
+        document.getElementById('emi-interest').textContent  = fmt(data.totalInterest);
+        document.getElementById('emi-total').textContent     = fmt(data.totalPayable);
+      }
+    } catch(e) {}
+  }, 400);
+}
+
+async function applyLoan() {
+  const amount  = document.getElementById('loan-amount').value;
+  const purpose = document.getElementById('loan-purpose').value;
+  const term    = document.getElementById('loan-term').value;
+  clearAlert('loan-error'); clearAlert('loan-success');
+
+  if (!amount || amount < 1000) {
+    showAlert('loan-error', '❌ Minimum loan amount is ₹1,000.');
+    return;
+  }
+  if (amount > 1000000) {
+    showAlert('loan-error', '❌ Maximum loan amount is ₹10,00,000.');
+    return;
+  }
+
+  setBtnLoading('btn-apply-loan', true, 'Submitting...');
+  try {
+    const res = await apiFetch(API + '/loans', {
+        method: 'POST',
+        body: JSON.stringify({ amount, purpose, termMonths: term })
+    });
+    const data = await res.json();
+    
+    if (res.ok || data.status === 'success') {
+      showAlert('loan-success', '✅ ' + (data.message || 'Loan applied.'));
+      document.getElementById('loan-amount').value = '';
+      document.getElementById('emi-preview').style.display       = 'none';
+      document.getElementById('emi-preview-empty').style.display = 'block';
+      renderLoansHistory(); // refresh the list
+    } else {
+      showAlert('loan-error', '❌ ' + (data.error || data.message));
+    }
+  } catch(e) {
+    showAlert('loan-error', '❌ Server error. Please try again.');
+  } finally {
+    setBtnLoading('btn-apply-loan', false);
+  }
+}
+
+async function renderLoans() {
+  renderLoansHistory();
+}
+
+async function renderLoansHistory() {
+  const container = document.getElementById('loans-list');
+  container.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div><p>Loading...</p></div>';
+  try {
+    const res = await apiFetch(API + '/loans');
+    const data = await res.json();
+    
+    if (!data.loans || !data.loans.length) {
+      container.innerHTML = '<div class="empty-state"><div class="es-icon">🏦</div><p>No loan applications yet. Apply above to get started.</p></div>';
+      return;
+    }
+    container.innerHTML = data.loans.map(loan => {
+      const statusColor = { PENDING:'var(--gold)', APPROVED:'var(--success)', REJECTED:'var(--danger)' }[loan.status] || 'var(--text-muted)';
+      const statusIcon  = { PENDING:'⏳', APPROVED:'✅', REJECTED:'❌' }[loan.status] || '•';
+      const date = new Date(loan.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+      const processedDate = loan.processed_at
+        ? new Date(loan.processed_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
+        : null;
+
+      return `<div class="tx-item" style="border-left:3px solid ${statusColor};padding-left:20px;margin-bottom:4px">
+        <div class="tx-icon" style="background:rgba(30,95,212,0.15);font-size:1.2rem">🏦</div>
+        <div class="tx-info">
+          <div class="tx-type">Loan Application
+            <span style="margin-left:8px;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:20px;
+                  background:${statusColor}22;color:${statusColor}">
+              ${statusIcon} ${loan.status}
+            </span>
+          </div>
+          <div class="tx-date">Applied: ${date}${processedDate ? ' &nbsp;·&nbsp; Processed: ' + processedDate : ''}</div>
+          ${loan.status==='APPROVED' && loan.emi ? `<div style="font-size:0.78rem;color:var(--success);margin-top:4px">EMI: ${fmt(loan.emi)}/month</div>` : ''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700">${fmt(loan.amount)}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">Loan Amount</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = '<div class="empty-state"><div class="es-icon">❌</div><p>Could not load loans.</p></div>';
+  }
+}
+
+// ─── STATEMENT ───
+async function downloadStatement() {
+  const month = document.getElementById('stmt-month').value;
+  if (!month) { showToast('Please select a month', 'error'); return; }
+
+  const btn = document.getElementById('btn-statement');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner-sm"></div> Generating PDF...';
+
+  try {
+    const url = `${API}/statement?month=${month}`;
+    const response = await apiFetch(url); // Now using apiFetch to include JWT token
+
+    if (!response.ok) {
+      const msg = await response.text();
+      showToast('❌ ' + (msg || 'Failed to generate statement'), 'error');
+      return;
+    }
+
+    // Stream the PDF blob and trigger browser download
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `SecureBank_Statement_${month}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+
+    showToast('📄 Statement downloaded successfully!', 'success');
+  } catch(e) {
+    showToast('❌ Could not connect to server', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '📄 Download PDF Statement';
+  }
+}
+
+// ─── PROFILE ───
+async function renderProfile() {
+  try {
+    const res = await apiFetch(API + '/auth/account');
+    const data = await res.json();
+    if(res.ok || data.status==='success'){
+      currentUser={...currentUser,...data};
+      const n=currentUser.name;
+      document.getElementById('profile-avatar').textContent=initials(n);
+      document.getElementById('profile-name').textContent=n;
+      document.getElementById('profile-email').textContent=currentUser.email;
+      document.getElementById('profile-accno').textContent=currentUser.account_number;
+      document.getElementById('info-name').textContent=n;
+      document.getElementById('info-email').textContent=currentUser.email;
+      document.getElementById('info-accno').textContent=currentUser.account_number;
+      document.getElementById('info-balance').textContent=fmt(currentUser.balance);
+    }
+  } catch(e){}
+  checkPinStatus();
+}
+
+async function checkPinStatus() {
+  const el=document.getElementById('pin-status-display');
+  try {
+    // Try verifying a dummy pin — if message says "No PIN set", we know
+    const res = await apiFetch(API + '/pin/verify', {
+        method: 'POST',
+        body: JSON.stringify({ pin: '0000' })
+    });
+    const data = await res.json();
+    if((data.error || data.message) && (data.error || data.message).includes('No PIN')) {
+      el.className='pin-status unset'; el.innerHTML='<span>⚪</span><span>No transaction PIN set. Set one below for security.</span>';
+    } else {
+      el.className='pin-status set'; el.innerHTML='<span>✅</span><span>Transaction PIN is active and set.</span>';
+    }
+  } catch(e){}
+}
+
+async function doChangePassword() {
+  const curr=document.getElementById('pwd-current').value;
+  const nw=document.getElementById('pwd-new').value;
+  const conf=document.getElementById('pwd-confirm').value;
+  clearAlert('pwd-error');clearAlert('pwd-success');
+  let valid=true;
+  if(!curr){setFieldError('pwd-current','err-pwd-current',true);valid=false;}
+  if(!nw||nw.length<6){setFieldError('pwd-new','err-pwd-new',true);valid=false;}
+  if(nw!==conf){setFieldError('pwd-confirm','err-pwd-confirm',true);valid=false;}
+  if(!valid)return;
+  showLoader('Updating password...');
+  try {
+    const res = await apiFetch(API + '/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: curr, newPassword: nw })
+    });
+    const data = await res.json();
+    if(res.ok || data.status==='success'){
+        document.getElementById('pwd-current').value=document.getElementById('pwd-new').value=document.getElementById('pwd-confirm').value='';
+        showAlert('pwd-success','✅ Password updated!');
+        showToast('Password changed!');
+    } else showAlert('pwd-error','❌ '+(data.error || data.message));
+  }catch(e){showAlert('pwd-error','❌ Server error.');}
+  finally{hideLoader();}
+}
+
+// ─── PIN MANAGEMENT ───
+function pinNav(input, idx, group) {
+  input.classList.add('filled');
+  if(input.value&&idx<3){
+    const inputs=document.querySelectorAll(`#${group==='set'?'set-pin-inputs':group==='confirm'?'confirm-pin-inputs':'verify-pin-inputs'} .pin-digit`);
+    inputs[idx+1].focus();
+  }
+}
+
+function getPinValue(group) {
+  const id=group==='set'?'set-pin-inputs':group==='confirm'?'confirm-pin-inputs':'verify-pin-inputs';
+  return Array.from(document.querySelectorAll(`#${id} .pin-digit`)).map(i=>i.value).join('');
+}
+
+function clearPinInputs(group) {
+  const id=group==='set'?'set-pin-inputs':group==='confirm'?'confirm-pin-inputs':'verify-pin-inputs';
+  document.querySelectorAll(`#${id} .pin-digit`).forEach(i=>{i.value='';i.classList.remove('filled','error');});
+}
+
+function setPinError(group) {
+  const id=group==='set'?'set-pin-inputs':group==='confirm'?'confirm-pin-inputs':'verify-pin-inputs';
+  document.querySelectorAll(`#${id} .pin-digit`).forEach(i=>i.classList.add('error'));
+  setTimeout(()=>clearPinInputs(group),800);
+}
+
+async function doSetPin() {
+  const password=document.getElementById('set-pin-password').value;
+  const pin    =getPinValue('set');
+  const confirm=getPinValue('confirm');
+  clearAlert('set-pin-error');clearAlert('set-pin-success');
+
+  if(!password){showAlert('set-pin-error','❌ Account password required.');return;}
+  if(pin.length!==4){showAlert('set-pin-error','❌ Enter all 4 PIN digits.');setPinError('set');return;}
+  if(pin!==confirm){showAlert('set-pin-error','❌ PINs do not match.');setPinError('confirm');return;}
+
+  showLoader('Setting PIN...');
+  try {
+    const res = await apiFetch(API + '/pin/set', {
+        method: 'POST',
+        body: JSON.stringify({ password, pin, confirmPin: confirm })
+    });
+    const data = await res.json();
+    if(res.ok || data.status==='success'){
+      clearPinInputs('set');clearPinInputs('confirm');
+      document.getElementById('set-pin-password').value='';
+      showAlert('set-pin-success','✅ Transaction PIN set successfully!');
+      showToast('PIN set! 🔐');checkPinStatus();
+    }else showAlert('set-pin-error','❌ '+(data.error || data.message));
+  }catch(e){showAlert('set-pin-error','❌ Server error.');}
+  finally{hideLoader();}
+}
+
+// ─── CHARTS ───
+function processTransactions(transactions) {
+  let deposits = 0;
+  let withdrawals = 0;
+  let received = 0;
+  let sent = 0;
+
+  transactions.forEach(tx => {
+    if (tx.type === "DEPOSIT") deposits += tx.amount;
+    else if (tx.type === "WITHDRAW") withdrawals += tx.amount;
+    else if (tx.type === "TRANSFER_IN") received += tx.amount;
+    else if (tx.type === "TRANSFER_OUT") sent += tx.amount;
+  });
+
+  return { deposits, withdrawals, received, sent };
+}
+
+async function renderCharts() {
+  try {
+    if(!allTxCache.length){
+      const res = await apiFetch(API + '/transactions?type=ALL&limit=200');
+      const data = await res.json();
+      if(res.ok || data.status==='success') {
+        allTxCache = data.transactions || [];
+      }
+    }
+
+    const summary = processTransactions(allTxCache);
+
+    buildBarChart(summary);
+    buildDoughnutChart(summary);
+    buildLineChart();
+
+  } catch(e){
+    showToast('Could not load analytics','error');
+  }
+}
+
+function filterTxByPeriod(period) {
+  const now=new Date();
+  return allTxCache.filter(tx=>{
+    const d=new Date(tx.created_at);
+    if(period==='week'){const w=new Date(now);w.setDate(w.getDate()-7);return d>=w;}
+    if(period==='month'){return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}
+    return true;
+  });
+}
+
+function buildBarChart(data) {
+  const ctx = document.getElementById('chart-bar');
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Income','Expenses'],
+      datasets: [{
+        label: 'Amount',
+        data: [
+          data.deposits + data.received,     // income
+          data.withdrawals + data.sent      // expenses
+        ]
+      }]
+    }
+  });
+}
+
+function buildDoughnutChart(data) {
+  const ctx = document.getElementById('chart-doughnut');
+
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Deposits','Withdrawals','Received','Sent'],
+      datasets: [{
+        data: [
+          data.deposits,
+          data.withdrawals,
+          data.received,
+          data.sent
+        ]
+      }]
+    }
+  });
+}
+
+function buildLineChart() {
+  // Build running balance over last 10 transactions
+  const recent=[...allTxCache].reverse().slice(-10);
+  let bal=currentUser.balance;
+  // Walk backwards to get starting balance
+  allTxCache.forEach(tx=>{ if(['DEPOSIT','TRANSFER_IN'].includes(tx.type)) bal-=tx.amount; else bal+=tx.amount; });
+  const points=[]; let rb=bal;
+  recent.forEach(tx=>{
+    if(['DEPOSIT','TRANSFER_IN'].includes(tx.type)) rb+=tx.amount;
+    else rb-=tx.amount;
+    points.push({x:tx.created_at.slice(0,10),y:Math.round(rb)});
+  });
+  const ctx=document.getElementById('chart-line').getContext('2d');
+  if(chartLine) chartLine.destroy();
+  chartLine=new Chart(ctx,{
+    type:'line',
+    data:{labels:points.map(p=>p.x),datasets:[{label:'Balance',data:points.map(p=>p.y),borderColor:'#2d7ef7',backgroundColor:'rgba(45,126,247,0.1)',fill:true,tension:0.4,pointBackgroundColor:'#2d7ef7',pointRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8899bb',maxTicksLimit:6},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8899bb',callback:v=>'₹'+v.toLocaleString('en-IN')},grid:{color:'rgba(255,255,255,0.05)'}}},responsive:true,maintainAspectRatio:false}
+  });
+}
+
+function switchChartPeriod(period,el) {
+  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const filtered = filterTxByPeriod(period);
+  const summary = processTransactions(filtered);
+  buildBarChart(summary);
+}
+
+// ─── ADMIN ───
+async function renderAdminDashboard() {
+  showLoader('Loading admin data...');
+  try {
+    const statRes = await apiFetch(API + '/admin/dashboard');
+    const stats = await statRes.json();
+    if(statRes.ok || stats.status==='success'){
+      document.getElementById('admin-total-accounts').textContent=stats.totalAccounts;
+      document.getElementById('admin-total-balance').textContent=fmt(stats.totalBalance);
+      document.getElementById('admin-locked').textContent=stats.lockedAccounts;
+      document.getElementById('admin-total-tx').textContent=stats.totalTx;
+    }
+    const accRes = await apiFetch(API + '/admin/accounts');
+    const accs = await accRes.json();
+    if(accRes.ok || accs.status==='success') renderAdminTable(accs.accounts || accs);
+  }catch(e){showToast('Could not load admin data','error');}
+  finally{hideLoader();}
+}
+
+function renderAdminTable(accounts) {
+  if (!accounts || !Array.isArray(accounts)) return;
+  document.getElementById('admin-accounts-body').innerHTML=accounts.map(a=>`
+    <tr>
+      <td style="font-family:monospace;color:var(--gold-light)">${a.account_number}</td>
+      <td>${a.name}</td>
+      <td style="color:var(--text-muted)">${a.email}</td>
+      <td style="font-weight:600">${fmt(a.balance)}</td>
+      <td><span class="badge ${a.is_locked?'badge-locked':'badge-active'}">${a.is_locked?'🔒 Locked':'✅ Active'}</span></td>
+      <td>${a.is_locked?`<button class="btn btn-sm btn-ghost" onclick="adminUnlock('${a.id}')">Unlock</button>`:`<button class="btn btn-sm btn-danger" onclick="adminLock('${a.id}')">Lock</button>`}</td>
+    </tr>`).join('');
+}
+
+async function adminSearchAccounts() {
+  const q=document.getElementById('admin-search').value.toLowerCase();
+  const res = await apiFetch(API + '/admin/accounts');
+  const data = await res.json();
+  const accounts = data.accounts || data;
+  if(res.ok || data.status==='success') renderAdminTable(accounts.filter(a=>a.name.toLowerCase().includes(q)||a.email.toLowerCase().includes(q)));
+}
+
+async function adminUnlock(id) {
+  const res = await apiFetch(API + `/admin/accounts/${id}/unlock`, { method: 'POST' });
+  const data = await res.json();
+  if(res.ok || data.status==='success'){renderAdminDashboard();showToast('Account unlocked.');}
+  else showToast(data.error || data.message,'error');
+}
+async function adminLock(id) {
+  const res = await apiFetch(API + `/admin/accounts/${id}/lock`, { method: 'POST' });
+  const data = await res.json();
+  if(res.ok || data.status==='success'){renderAdminDashboard();showToast('Account locked.','info');}
+  else showToast(data.error || data.message,'error');
+}
+
+async function renderAdminTransactions() {
+  const container=document.getElementById('admin-tx-list');
+  container.innerHTML='<div class="empty-state"><div class="es-icon">⏳</div><p>Loading...</p></div>';
+  try {
+    const res = await apiFetch(API + '/admin/transactions');
+    const data = await res.json();
+    const txs = data.transactions || data;
+    if(!txs||!txs.length){
+      container.innerHTML='<div class="empty-state"><div class="es-icon">📭</div><p>No transactions</p></div>';
+      return;
+    }
+    container.innerHTML=txs.map(tx=>{
+      const icons={DEPOSIT:'📥',WITHDRAW:'📤',TRANSFER_IN:'📨',TRANSFER_OUT:'📤'};
+      const cls=['DEPOSIT','TRANSFER_IN'].includes(tx.type)?'in':'out';
+      const sign=cls==='in'?'+':'-';
+      return `<div class="tx-item">
+        <div class="tx-icon ${cls}">${icons[tx.type]||'💱'}</div>
+        <div class="tx-info"><div class="tx-type">${tx.description} <span style="color:var(--text-muted);font-weight:400">— ${tx.account_name||''}</span></div><div class="tx-date">${tx.created_at}</div></div>
+        <div style="text-align:right"><div class="tx-amount ${cls}">${sign}${fmt(tx.amount)}</div><span class="tx-badge ${cls}">${tx.type.replace('_',' ')}</span></div>
+      </div>`;
+    }).join('');
+  } catch(e){showToast('Could not load transactions','error');}
+}
+
+async function renderAdminLoans() {
+  const container = document.getElementById('admin-loans-list');
+  container.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div><p>Loading...</p></div>';
+  
+  const res = await apiFetch(API + '/admin/loans');
+  const data = await res.json();
+  const loansList = data.loans || data;
+  
+  if (!loansList || !loansList.length) {
+    container.innerHTML = '<div class="empty-state"><div class="es-icon">📭</div><p>No loan requests found</p></div>';
+    return;
+  }
+  container.innerHTML = loansList.map(loan => {
+    const statusColor = { PENDING:'var(--gold)', APPROVED:'var(--success)', REJECTED:'var(--danger)' }[loan.status] || 'var(--text-muted)';
+    const statusIcon  = { PENDING:'⏳', APPROVED:'✅', REJECTED:'❌' }[loan.status] || '•';
+    const date = new Date(loan.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+    return `<div class="tx-item" style="border-left:3px solid ${statusColor};padding-left:20px">
+      <div class="tx-icon" style="background:rgba(30,95,212,0.15)">🏦</div>
+      <div class="tx-info">
+        <div class="tx-type">${loan.account_name}
+          <span style="margin-left:8px;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:20px;
+                background:${statusColor}22;color:${statusColor}">
+            ${statusIcon} ${loan.status}
+          </span>
+        </div>
+        <div class="tx-date">${date}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700">${fmt(loan.amount)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function adminProcessLoan() {
+  setBtnLoading('btn-process-loan', true, 'Processing...');
+  try {
+    const res = await apiFetch(API + '/admin/loans/process', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok || data.status === 'success') {
+      showToast('✅ ' + (data.message || 'Loan processed successfully'));
+      renderAdminLoans();
+      renderAdminDashboard();
+    } else {
+      showToast('❌ ' + (data.error || data.message), 'error');
+    }
+  } catch(e) { showToast('Server error', 'error'); }
+  finally { setBtnLoading('btn-process-loan', false); }
+}
+</script>
+</body>
+</html>
