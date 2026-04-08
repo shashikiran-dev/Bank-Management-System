@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Bank Management System (Java + Spring Boot)
 
 ![Java](https://img.shields.io/badge/Java-21-blue)
@@ -170,3 +171,6 @@ spring.datasource.url=${DB_URL}
 spring.datasource.username=${DB_USERNAME}
 spring.datasource.password=${DB_PASSWORD}
 ```
+=======
+# Bank-Management-System
+>>>>>>> 1e9955ed5f181ac51110d0915ef14254d52de521
