@@ -7,6 +7,7 @@ import com.omkaar.bank.repository.AccountRepository;
 import com.omkaar.bank.repository.TransactionRepository;
 import com.omkaar.bank.repository.UserRepository;
 import com.omkaar.bank.service.PdfStatementService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +18,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * GET /api/statement?accountId=USER_UUID&month=YYYY-MM
- *
- * Streams a PDF directly to the browser as a file download.
+ * GET /api/statement?month=YYYY-MM
+ * Reads userId from JWT — no accountId param needed from frontend.
  */
 @RestController
 @RequestMapping("/api/statement")
@@ -43,33 +43,33 @@ public class StatementController {
 
     @GetMapping
     public ResponseEntity<?> downloadStatement(
-            @RequestParam UUID   accountId,   // user UUID from frontend
-            @RequestParam String month) {     // e.g. "2024-03"
+            @RequestParam String month,          // e.g. "2024-03"
+            HttpServletRequest req) {
 
-        // ── Resolve user → account ───────────────────────────────────────
-        Optional<UserEntity> userOpt = userRepository.findById(accountId);
-        if (userOpt.isEmpty()) {
+        // ── Get userId from JWT (set by JwtFilter) ───────────────────────
+        String userIdStr = (String) req.getAttribute("userId");
+        if (userIdStr == null)
+            return ResponseEntity.status(401).body("Not authenticated.");
+
+        UUID userId = UUID.fromString(userIdStr);
+
+        Optional<UserEntity> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty())
             return ResponseEntity.badRequest().body("User not found.");
-        }
 
-        UserEntity    user    = userOpt.get();
-        Optional<AccountEntity> accOpt =
-                accountRepository.findById(user.getAccountId());
-        if (accOpt.isEmpty()) {
+        UserEntity user = userOpt.get();
+        Optional<AccountEntity> accOpt = accountRepository.findById(user.getAccountId());
+        if (accOpt.isEmpty())
             return ResponseEntity.badRequest().body("Account not found.");
-        }
 
         AccountEntity account = accOpt.get();
 
-        // ── Fetch all transactions for this account ──────────────────────
         List<TransactionEntity> transactions =
                 transactionRepository.findByFromAccountIdOrToAccountId(
                         account.getId(), account.getId());
 
-        // ── Generate PDF ─────────────────────────────────────────────────
         try {
             byte[] pdf = pdfStatementService.generate(user, account, transactions, month);
-
             String filename = "SecureBank_Statement_" + month + ".pdf";
 
             return ResponseEntity.ok()

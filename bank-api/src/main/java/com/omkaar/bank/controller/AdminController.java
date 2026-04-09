@@ -11,6 +11,7 @@ import com.omkaar.bank.repository.LoanRequestRepository;
 import com.omkaar.bank.repository.TransactionRepository;
 import com.omkaar.bank.repository.UserRepository;
 import com.omkaar.bank.service.BankOperations;
+import com.omkaar.bank.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,73 +31,85 @@ public class AdminController {
     private final TransactionRepository txRepo;
     private final LoanRequestRepository loanRepo;
     private final BankOperations        bank;
+    private final JwtUtil               jwtUtil;
 
     public AdminController(AdminConfig adminConfig,
                            AccountRepository accountRepo,
                            UserRepository userRepo,
                            TransactionRepository txRepo,
                            LoanRequestRepository loanRepo,
-                           BankOperations bank) {
+                           BankOperations bank,
+                           JwtUtil jwtUtil) {
         this.adminConfig = adminConfig;
         this.accountRepo = accountRepo;
         this.userRepo    = userRepo;
         this.txRepo      = txRepo;
         this.loanRepo    = loanRepo;
         this.bank        = bank;
+        this.jwtUtil     = jwtUtil;
     }
 
-    /* ── ADMIN LOGIN — issues JWT with ADMIN role ────────────────────── */
+    /* ── ADMIN LOGIN ─────────────────────────────────────────────────── */
     @PostMapping("/login")
     public ResponseEntity<Map<String,Object>> adminLogin(
-            @RequestParam String username,
-            @RequestParam String password) {
+            @RequestBody Map<String,String> body) {
+
+        String username = body.get("username");
+        String password = body.get("password");
 
         if (!adminConfig.authenticate(username, password))
             return ResponseEntity.status(401).body(error("Invalid admin credentials."));
 
-        // We don't need JwtUtil here — the existing GET/POST /api/admin
-        // endpoints still use user+pass params for backward compatibility.
-        // JWT admin auth can be wired in a future step.
+        // Subject is "admin" — admin controllers never call UUID.fromString on it
+        String token = jwtUtil.generate("admin", username, "ADMIN");
+
         Map<String,Object> res = new LinkedHashMap<>();
         res.put("status", "success");
+        res.put("token",  token);
         res.put("role",   "ADMIN");
         return ResponseEntity.ok(res);
     }
 
-    /* ── GET endpoints ───────────────────────────────────────────────── */
-    @GetMapping
-    public ResponseEntity<Map<String,Object>> handleGet(
-            @RequestParam String action,
-            @RequestParam String user,
-            @RequestParam String pass) {
-
-        if (!adminConfig.authenticate(user, pass)) return ok(error("Invalid admin credentials."));
-
-        return switch (action.toLowerCase()) {
-            case "stats"        -> ok(getStats());
-            case "accounts"     -> ok(getAccounts());
-            case "transactions" -> ok(getAllTransactions());
-            case "loans"        -> ok(getAllLoans());
-            default             -> ok(error("Unknown action: " + action));
-        };
+    /* ── DASHBOARD STATS ─────────────────────────────────────────────── */
+    @GetMapping("/dashboard")
+    public ResponseEntity<Map<String,Object>> dashboard(HttpServletRequest req) {
+        return ResponseEntity.ok(getStats());
     }
 
-    /* ── POST endpoints ──────────────────────────────────────────────── */
-    @PostMapping
-    public ResponseEntity<Map<String,Object>> handlePost(
-            @RequestParam String action,
-            @RequestParam String user,
-            @RequestParam String pass,
-            @RequestParam(required = false) UUID accountId) {
+    /* ── ALL ACCOUNTS ────────────────────────────────────────────────── */
+    @GetMapping("/accounts")
+    public ResponseEntity<Map<String,Object>> accounts(HttpServletRequest req) {
+        return ResponseEntity.ok(getAccounts());
+    }
 
-        if (!adminConfig.authenticate(user, pass)) return ok(error("Invalid admin credentials."));
+    /* ── ALL TRANSACTIONS ────────────────────────────────────────────── */
+    @GetMapping("/transactions")
+    public ResponseEntity<Map<String,Object>> transactions(HttpServletRequest req) {
+        return ResponseEntity.ok(getAllTransactions());
+    }
 
-        return switch (action.toLowerCase()) {
-            case "lock"         -> ok(setLock(accountId, true));
-            case "unlock"       -> ok(setLock(accountId, false));
-            case "process-loan" -> ok(processNextLoan());
-            default             -> ok(error("Unknown action: " + action));
-        };
+    /* ── ALL LOANS ───────────────────────────────────────────────────── */
+    @GetMapping("/loans")
+    public ResponseEntity<Map<String,Object>> loans(HttpServletRequest req) {
+        return ResponseEntity.ok(getAllLoans());
+    }
+
+    /* ── LOCK ACCOUNT ────────────────────────────────────────────────── */
+    @PostMapping("/accounts/{id}/lock")
+    public ResponseEntity<Map<String,Object>> lockAccount(@PathVariable UUID id) {
+        return ResponseEntity.ok(setLock(id, true));
+    }
+
+    /* ── UNLOCK ACCOUNT ──────────────────────────────────────────────── */
+    @PostMapping("/accounts/{id}/unlock")
+    public ResponseEntity<Map<String,Object>> unlockAccount(@PathVariable UUID id) {
+        return ResponseEntity.ok(setLock(id, false));
+    }
+
+    /* ── PROCESS LOAN ────────────────────────────────────────────────── */
+    @PostMapping("/loans/process")
+    public ResponseEntity<Map<String,Object>> processLoan() {
+        return ResponseEntity.ok(processNextLoan());
     }
 
     /* ── STATS ───────────────────────────────────────────────────────── */
@@ -253,9 +266,5 @@ public class AdminController {
         m.put("status",  "error");
         m.put("message", msg);
         return m;
-    }
-
-    private static ResponseEntity<Map<String,Object>> ok(Map<String,Object> body) {
-        return ResponseEntity.ok(body);
     }
 }

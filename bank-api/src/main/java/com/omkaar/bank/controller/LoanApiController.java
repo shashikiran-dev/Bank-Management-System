@@ -32,16 +32,18 @@ public class LoanApiController {
         this.bank      = bank;
     }
 
-    /* ── APPLY ───────────────────────────────────────────────────────── */
-    @PostMapping("/apply")
+    /* ── APPLY — Frontend: POST /api/loans ──────────────────────────── */
+    @PostMapping
     public ResponseEntity<Map<String,Object>> apply(
-            @RequestParam(required = false) UUID userId,
-            @RequestParam BigDecimal amount,
-            @RequestParam(defaultValue = "Personal Loan") String purpose,
-            @RequestParam(defaultValue = "12") int termMonths,
+            @RequestBody Map<String,Object> body,
             HttpServletRequest req) {
 
-        UUID resolvedId = resolveUserId(req, userId);
+        BigDecimal amount = new BigDecimal(body.get("amount").toString());
+        String purpose    = body.getOrDefault("purpose", "Personal Loan").toString();
+        int termMonths    = body.containsKey("termMonths")
+                            ? Integer.parseInt(body.get("termMonths").toString()) : 12;
+
+        UUID resolvedId = resolveUserId(req);
         Optional<UserEntity> opt = userRepo.findById(resolvedId);
         if (opt.isEmpty()) return bad("User not found.");
 
@@ -54,7 +56,6 @@ public class LoanApiController {
 
         UUID accountId = opt.get().getAccountId();
 
-        // Block duplicate pending
         boolean alreadyPending = loanRepo
                 .findByStatusOrderByCreatedAtAsc(LoanStatus.PENDING)
                 .stream().anyMatch(l -> l.getAccountId().equals(accountId));
@@ -73,13 +74,11 @@ public class LoanApiController {
         return ResponseEntity.ok(res);
     }
 
-    /* ── MY LOANS ────────────────────────────────────────────────────── */
-    @GetMapping("/my")
-    public ResponseEntity<Map<String,Object>> myLoans(
-            @RequestParam(required = false) UUID userId,
-            HttpServletRequest req) {
+    /* ── MY LOANS — Frontend: GET /api/loans ────────────────────────── */
+    @GetMapping
+    public ResponseEntity<Map<String,Object>> myLoans(HttpServletRequest req) {
 
-        UUID resolvedId = resolveUserId(req, userId);
+        UUID resolvedId = resolveUserId(req);
         Optional<UserEntity> opt = userRepo.findById(resolvedId);
         if (opt.isEmpty()) return bad("User not found.");
 
@@ -107,7 +106,7 @@ public class LoanApiController {
         return ResponseEntity.ok(res);
     }
 
-    /* ── EMI CALCULATOR ──────────────────────────────────────────────── */
+    /* ── EMI CALCULATOR — Frontend: GET /api/loans/emi ─────────────── */
     @GetMapping("/emi")
     public ResponseEntity<Map<String,Object>> emiCalc(
             @RequestParam BigDecimal amount,
@@ -142,10 +141,9 @@ public class LoanApiController {
         return BigDecimal.valueOf(emi).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private static UUID resolveUserId(HttpServletRequest req, UUID fallback) {
+    private static UUID resolveUserId(HttpServletRequest req) {
         String fromJwt = (String) req.getAttribute("userId");
         if (fromJwt != null) return UUID.fromString(fromJwt);
-        if (fallback != null) return fallback;
         throw new RuntimeException("User not authenticated.");
     }
 

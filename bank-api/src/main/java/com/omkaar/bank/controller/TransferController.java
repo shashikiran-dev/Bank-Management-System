@@ -34,12 +34,13 @@ public class TransferController {
     }
 
     /* ── LOOKUP receiver by short account number ─────────────────────── */
-    @GetMapping
+    // Frontend calls: GET /api/transfer/lookup?accountNo=XXXX
+    @GetMapping("/lookup")
     public ResponseEntity<Map<String,Object>> lookup(
-            @RequestParam String accno) {
+            @RequestParam String accountNo) {
 
         Optional<AccountEntity> match = accountRepo.findAll().stream()
-                .filter(a -> shortAccNo(a.getId()).equalsIgnoreCase(accno))
+                .filter(a -> shortAccNo(a.getId()).equalsIgnoreCase(accountNo))
                 .findFirst();
 
         if (match.isEmpty()) {
@@ -61,16 +62,17 @@ public class TransferController {
     }
 
     /* ── EXECUTE TRANSFER ────────────────────────────────────────────── */
+    // Frontend sends: { receiverAccNo, amount, note }
     @PostMapping
     public ResponseEntity<Map<String,Object>> transfer(
-            @RequestParam String  receiverAccNo,
-            @RequestParam BigDecimal amount,
-            @RequestParam(defaultValue = "Fund transfer") String note,
-            // Legacy support — senderId param OR JWT userId attribute
-            @RequestParam(required = false) UUID senderId,
+            @RequestBody Map<String,Object> body,
             HttpServletRequest req) {
 
-        UUID userId = resolveUserId(req, senderId);
+        String     receiverAccNo = body.get("receiverAccNo").toString();
+        BigDecimal amount        = new BigDecimal(body.get("amount").toString());
+        String     note          = body.getOrDefault("note", "Fund transfer").toString();
+
+        UUID userId = resolveUserId(req, null);
 
         Optional<UserEntity> senderOpt = userRepo.findById(userId);
         if (senderOpt.isEmpty()) return bad("Sender not found.");

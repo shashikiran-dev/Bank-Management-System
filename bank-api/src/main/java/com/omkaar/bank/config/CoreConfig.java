@@ -10,8 +10,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 @EnableConfigurationProperties({AdminConfig.class, BankingRules.class})
@@ -26,15 +24,7 @@ public class CoreConfig {
         return new BankServiceImpl(ar, tr, lr, limitChecker);
     }
 
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/api/**")
-                        .allowedOrigins("*")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
-            }
-        };
-    }
+    // CORS is now handled globally by GlobalCorsConfig (CorsFilter bean)
+    // which runs before the JWT filter — do NOT add WebMvcConfigurer here
+    // as it would conflict with the filter-level CORS setup.
 }

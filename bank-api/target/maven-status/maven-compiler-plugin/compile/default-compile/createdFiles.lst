@@ -1,11 +1,11 @@
 com\omkaar\bank\controller\PinController.class
 com\omkaar\bank\exception\TransactionLimitException.class
 com\omkaar\bank\service\PdfStatementService$1.class
-com\omkaar\bank\config\CoreConfig$1.class
 com\omkaar\bank\controller\AdminController.class
 com\omkaar\bank\config\FilterConfig.class
 com\omkaar\bank\repository\UserRepository.class
 com\omkaar\bank\mapper\AccountMapper$1.class
+com\omkaar\bank\model\RegisterRequest.class
 com\omkaar\bank\util\JwtUtil.class
 com\omkaar\bank\controller\AccountController.class
 com\omkaar\bank\controller\TransactionController.class
@@ -28,6 +28,7 @@ com\omkaar\bank\controller\TransactionApiController.class
 com\omkaar\bank\service\BankServiceImpl$1.class
 com\omkaar\bank\controller\LoanController.class
 com\omkaar\bank\controller\AdminController$1.class
+com\omkaar\bank\config\GlobalCorsConfig.class
 com\omkaar\bank\util\OtpStore.class
 com\omkaar\bank\service\BankServiceImpl.class
 com\omkaar\bank\mapper\TransactionMapper.class
@@ -37,7 +38,9 @@ com\omkaar\bank\service\LimitChecker.class
 com\omkaar\bank\exception\GlobalExceptionHandler.class
 com\omkaar\bank\filter\JwtFilter.class
 com\omkaar\bank\entity\UserEntity.class
+com\omkaar\bank\model\LoginRequest.class
 com\omkaar\bank\config\BankingRules.class
+com\omkaar\bank\model\OtpRequest.class
 com\omkaar\bank\entity\TransactionEntity.class
 com\omkaar\bank\util\OtpStore$OtpEntry.class
 com\omkaar\bank\service\PdfStatementService.class

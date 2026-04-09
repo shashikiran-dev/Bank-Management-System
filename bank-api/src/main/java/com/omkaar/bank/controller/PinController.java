@@ -21,23 +21,22 @@ public class PinController {
     }
 
     /* ── SET PIN ──────────────────────────────────────────────────────── */
+    // Frontend sends: { pin, password }
     @PostMapping("/set")
     public ResponseEntity<Map<String,Object>> setPin(
-            @RequestParam String pin,
-            @RequestParam(required = false) String password,
-            // Legacy: explicit userId param OR JWT
-            @RequestParam(required = false) UUID id,
-            @RequestParam(required = false) String action,
+            @RequestBody Map<String,String> body,
             HttpServletRequest req) {
 
-        UUID userId = resolveUserId(req, id);
+        String pin      = body.get("pin");
+        String password = body.get("password");
+
+        UUID userId = resolveUserId(req, null);
 
         if (pin == null || !pin.matches("\\d{4}"))
             return bad("PIN must be exactly 4 digits.");
 
         UserEntity user = userRepo.findById(userId).orElseThrow();
 
-        // If password provided, verify it first
         if (password != null && !PasswordUtil.matches(password, user.getPassword()))
             return bad("Incorrect password.");
 
@@ -47,14 +46,15 @@ public class PinController {
     }
 
     /* ── VERIFY PIN ───────────────────────────────────────────────────── */
+    // Frontend sends: { pin }
     @PostMapping("/verify")
     public ResponseEntity<Map<String,Object>> verifyPin(
-            @RequestParam String pin,
-            @RequestParam(required = false) UUID id,
-            @RequestParam(required = false) String action,
+            @RequestBody Map<String,String> body,
             HttpServletRequest req) {
 
-        UUID userId = resolveUserId(req, id);
+        String pin    = body.get("pin");
+        UUID   userId = resolveUserId(req, null);
+
         UserEntity user = userRepo.findById(userId).orElseThrow();
 
         if (user.getPinHash() == null || user.getPinHash().isBlank())
@@ -64,24 +64,6 @@ public class PinController {
             return ResponseEntity.status(401).body(error("Incorrect PIN."));
 
         return ok(success());
-    }
-
-    /* ── Legacy POST /api/pin with action param (backward compatibility) */
-    @PostMapping
-    public ResponseEntity<Map<String,Object>> handleLegacy(
-            @RequestParam(required = false) String action,
-            @RequestParam(required = false) UUID   id,
-            @RequestParam(required = false) String pin,
-            @RequestParam(required = false) String password,
-            HttpServletRequest req) {
-
-        if ("set".equalsIgnoreCase(action)) {
-            return setPin(pin, password, id, action, req);
-        }
-        if ("verify".equalsIgnoreCase(action)) {
-            return verifyPin(pin, id, action, req);
-        }
-        return bad("Unknown action: " + action);
     }
 
     /* ── HELPERS ─────────────────────────────────────────────────────── */

@@ -21,6 +21,7 @@ public class JwtFilter extends OncePerRequestFilter {
             "/api/auth/login",
             "/api/auth/verify-otp",
             "/api/auth/register",
+            "/api/auth/resend-otp",
             "/api/admin/login"
     );
 
@@ -32,8 +33,11 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
+    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+        return true; // ← this was missing
+    }
+    String path = request.getRequestURI();
+    return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
     }
 
     @Override
@@ -51,14 +55,24 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = header.substring(7); // strip "Bearer "
+        String token = header.substring(7);
 
         try {
             Claims claims = jwtUtil.validate(token);
-            // Attach userId and role to request attributes so controllers can read them
-            request.setAttribute("userId", claims.getSubject());
-            request.setAttribute("role",   claims.get("role", String.class));
-            request.setAttribute("email",  claims.get("email", String.class));
+            String role   = claims.get("role", String.class);
+
+            // For ADMIN tokens the subject is "admin" (not a UUID).
+            // Set userId only for USER tokens so controllers don't crash.
+            if ("ADMIN".equals(role)) {
+                request.setAttribute("role",  role);
+                request.setAttribute("email", claims.get("email", String.class));
+                // do NOT set userId — admin controllers don't need it
+            } else {
+                request.setAttribute("userId", claims.getSubject());
+                request.setAttribute("role",   role);
+                request.setAttribute("email",  claims.get("email", String.class));
+            }
+
             chain.doFilter(request, response);
         } catch (JwtException ex) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

@@ -48,7 +48,6 @@ public class TransactionApiController {
             @RequestParam(defaultValue = "100") int limit,
             HttpServletRequest req) {
 
-        // Support both JWT userId (from filter) and legacy accountId param
         UUID userId = resolveUserId(req, accountId);
         Optional<UserEntity> userOpt = userRepo.findById(userId);
         if (userOpt.isEmpty()) return ok(error("User not found."));
@@ -74,9 +73,10 @@ public class TransactionApiController {
     /* ── DEPOSIT ─────────────────────────────────────────────────────── */
     @PostMapping("/deposit")
     public ResponseEntity<Map<String,Object>> deposit(
-            @RequestParam BigDecimal amount,
+            @RequestBody Map<String,Object> body,
             HttpServletRequest req) {
 
+        BigDecimal amount = new BigDecimal(body.get("amount").toString());
         UUID          userId  = resolveUserId(req, null);
         AccountEntity account = findAccount(userId);
         limitChecker.checkDeposit(account, amount);
@@ -92,9 +92,10 @@ public class TransactionApiController {
     /* ── WITHDRAW ────────────────────────────────────────────────────── */
     @PostMapping("/withdraw")
     public ResponseEntity<Map<String,Object>> withdraw(
-            @RequestParam BigDecimal amount,
+            @RequestBody Map<String,Object> body,
             HttpServletRequest req) {
 
+        BigDecimal amount = new BigDecimal(body.get("amount").toString());
         UUID          userId  = resolveUserId(req, null);
         AccountEntity account = findAccount(userId);
         limitChecker.checkWithdrawal(account, amount);
@@ -114,10 +115,6 @@ public class TransactionApiController {
         return accountRepo.findById(user.getAccountId()).orElseThrow();
     }
 
-    /**
-     * Resolve user ID from JWT filter attribute first,
-     * falling back to the legacy accountId query param.
-     */
     private static UUID resolveUserId(HttpServletRequest req, UUID fallback) {
         String fromJwt = (String) req.getAttribute("userId");
         if (fromJwt != null) return UUID.fromString(fromJwt);
